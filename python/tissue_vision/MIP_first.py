@@ -33,7 +33,7 @@ input_dir = Path(args.input_dir)
 input_dir_ls = input_dir.ls()
 output_dir = Path(args.output_dir)
 
-slice_dirs = sorted([path for path in input_dir_ls if path.is_dir()])
+slice_dirs = sorted([path for path in input_dir_ls if path.is_dir() and name in path.name])
 tiles = [sorted([path for path in directory.ls() if ".tif" in str(path)],
                key=lambda tif: int(re.search(r"(?<=-)\d+(?=_)", str(tif)).group(0))) for directory in slice_dirs]
 slice_mosaics = sorted([path for directory in slice_dirs for path in directory.ls() if
