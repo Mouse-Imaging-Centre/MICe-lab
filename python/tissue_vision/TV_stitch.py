@@ -17,6 +17,7 @@ from numpy import *
 from numpy.linalg import lstsq
 import glob
 import operator
+from fastai.vision import Path
 
 #TODO why is this even needed? it breaks importing from TV_stitch
 #from tissue_vision.Zstack_icorr import *
@@ -835,6 +836,7 @@ to come straight off the TissueVision system and undergo preprocessing.
     #generate minc file
     if not (outputfile[-4:]==".mnc"): #output an image stack
         for z,cfile in enumerate(Zstacklist):
+            Path(outputfile).parent.mkdir(parents=True, exist_ok=True)
             cmdstr="cp %s %s"%(cfile,outputfile+'_Z%04d'%uniqueZ[z]+'.%s'%options.file_type)
             cmdout = run_subprocess(cmdstr)
     else: #output a mnc file
