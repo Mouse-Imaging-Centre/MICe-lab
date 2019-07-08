@@ -59,69 +59,6 @@ CellprofilerMemCfg = NamedTuple("CellprofilerMemCfg",
 
 default_cellprofiler_mem_cfg = CellprofilerMemCfg(base_mem=14, mem_per_size=2e-7)
 
-def cellprofiler_wrap(stitched: List[FileAtom],
-                       cellprofiler_pipeline: FileAtom,
-                       batch_data: FileAtom,
-                       overLays: List[FileAtom],
-                       anatomicals: List[FileAtom],
-                       count: List[FileAtom],
-                       Zstart: int,
-                       Zend: int,
-                       output_dir: str,
-                      version = 4):
-    s = Stages()
-    if version == 4:
-        def set_memory(stage: CmdStage, mem_cfg: NamedTuple, z):
-            img_size = os.stat(stitched[0].path).st_size
-            stage.setMem(mem_cfg.base_mem + img_size * mem_cfg.mem_per_size)
-        #cellprofiler's indexing starts at 1. so if Zstart=5, z=1 gives the 5th slice!
-        for z in range (1, Zend + 2 - Zstart):
-            stage = CmdStage(inputs=(stitched+[cellprofiler_pipeline]),
-                             outputs=(overLays[z-1], anatomicals[z-1], count[z-1]),
-                             cmd=['cellprofiler.sh', '-c', '-r',
-                                  '-p %s' % cellprofiler_pipeline.path,
-                                  '-i %s' % stitched[0].dir,
-                                  '-o %s' % batch_data.dir,
-                                  '-f %s' % z,
-                                  '-l %s' % z],
-                             #TODO make this automatic
-                             log_file=os.path.join(output_dir, "cellprofiler.log"))
-
-
-            #z=z is evaluated at this point, to avoid the problem of how python handles evironment.
-            stage.when_runnable_hooks.append(lambda s, z=z:
-                                             set_memory(s, default_cellprofiler_mem_cfg, z))
-
-            s.add(stage)
-
-    if version == 3:
-        stage = CmdStage(inputs=(stitched+[cellprofiler_pipeline]), outputs=(batch_data,),
-                         cmd=['cellprofiler.sh', '-c', '-r',
-                              '-p %s' % cellprofiler_pipeline.path,
-                              '-i %s' % stitched[0].dir,
-                              '-o %s' % batch_data.dir])
-        s.add(stage)
-        def set_memory(stage: CmdStage, mem_cfg: NamedTuple, z):
-            img_size = os.stat(stitched[0].path).st_size
-            stage.setMem(mem_cfg.base_mem + img_size * mem_cfg.mem_per_size)
-        #cellprofiler's indexing starts at 1. so if Zstart=5, z=1 gives the 5th slice!
-        for z in range (1, Zend + 2 - Zstart):
-            stage = CmdStage(inputs=(batch_data,), outputs=(overLays[z-1], anatomicals[z-1], count[z-1]),
-                             cmd=['cellprofiler.sh', '-c', '-r',
-                                  '-p %s' % batch_data.path,
-                                  '-f %s' % z,
-                                  '-l %s' % z],
-                             #TODO make this automatic
-                             log_file=os.path.join(output_dir, "cellprofiler.log"))
-
-
-            #z=z is evaluated at this point, to avoid the problem of how python handles evironment.
-            stage.when_runnable_hooks.append(lambda s, z=z:
-                                             set_memory(s, default_cellprofiler_mem_cfg, z))
-
-            s.add(stage)
-    return Result(stages=s, output=(overLays, anatomicals, count))
-
 def stacks_to_volume( slices: List[FileAtom],
                       volume: MincAtom,
                       z_resolution: float,
