@@ -94,7 +94,7 @@ TV_stitch_parser = AnnotatedParser(parser=BaseParser(_mk_TV_stitch_parser(), "TV
 
 def _mk_deep_segment_parser():
     p = ArgParser(add_help=False)
-    p.add_argument("--segmentation-pipeline", dest="segmentation_pipeline",
+    p.add_argument("--deep-segment-pipeline", dest="deep_segment_pipeline",
                    type=str,
                    default=None,
                    help="This is the segmentation pipeline")
@@ -106,6 +106,14 @@ def _mk_deep_segment_parser():
                    type=str,
                    default="count",
                    help="Specify the name of the count images outputted by deep_segment.py")
+    p.add_argument("--segment-name", dest="segment_name",
+                   type=str,
+                   default=None,
+                   help="Specify the name of the segmentation images outputted by deep_segment.py")
+    p.add_argument("--outline-name", dest="outline_name",
+                   type=str,
+                   default=None,
+                   help="Specify the name of the outline images outputted by deep_segment.py")
     return p
 
 deep_segment_parser = AnnotatedParser(parser=BaseParser(_mk_deep_segment_parser(), "deep_segment"),

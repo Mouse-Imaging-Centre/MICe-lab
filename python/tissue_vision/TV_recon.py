@@ -20,9 +20,9 @@ from pydpiper.minc.registration import autocrop, create_quality_control_images, 
     get_registration_targets_from_init_model, xfmconcat
 from pydpiper.pipelines.MBM import mbm, mk_mbm_parser
 
-from tissue_vision.arguments import TV_stitch_parser, cellprofiler_parser, stacks_to_volume_parser, autocrop_parser
+from tissue_vision.arguments import TV_stitch_parser, deep_segment_parser, stacks_to_volume_parser, autocrop_parser
 
-from tissue_vision.reconstruction import TV_stitch_wrap, cellprofiler_wrap, stacks_to_volume, \
+from tissue_vision.reconstruction import TV_stitch_wrap, deep_segment, stacks_to_volume, \
     antsRegistration, get_like, tif_to_minc, get_through_plane_xfm, concat_xfm, mincmath
 from tissue_vision.TV_stitch import get_params
 
@@ -59,8 +59,6 @@ def tv_recon_pipeline(options):
     s = Stages()
 
     brains = get_brains(options.application) # List(Brain,...)
-
-    cppline = FileAtom(options.cellprofiler.cellprofiler_pipeline)
 
     # Hold results obtained in the loop
     all_anatomical_pad_results = []
@@ -116,6 +114,39 @@ def tv_recon_pipeline(options):
                                                       Zend=brain.z_end,
                                                       output_dir=output_dir
                                                       ))
+
+#TODO write a when_finished_hook to tell the user that this finished.
+#############################
+# Step 2: Run deep_segment.py
+#############################
+        anatomical = options.deep_segment.anatomical_name
+        count = options.deep_segment.count_name
+
+        brain.ds_directory = os.path.join(output_dir, pipeline_name + "_deep_segmentation", brain.name)
+
+        outlines = []
+        anatomicals = []
+        counts = []
+
+        for z in range(brain.z_start, brain.z_end+1):
+            brain.slice_outline = FileAtom(
+                os.path.join(brain.ds_directory, brain.name + "_Z%04d_outline.tiff" % z))
+            brain.slice_anatomical = FileAtom(
+                os.path.join(brain.ds_directory, brain.name + "_Z%04d_" % z + anatomical + ".tiff"))
+            brain.slice_count = FileAtom(
+                os.path.join(brain.ds_directory, brain.name + "_Z%04d_" % z + count + ".tiff"))
+            outlines.append(brain.slice_outline)
+            anatomicals.append(brain.slice_anatomical)
+            counts.append(brain.slice_count)
+
+        deep_segment_result = s.defer(deep_segment(stitched = stitched,
+                                                   deep_segment_pipeline = FileAtom(options.deep_segment.deep_segment_pipeline),
+                                                   anatomicals = anatomicals,
+                                                   counts = counts,
+                                                   Zstart = brain.z_start,
+                                                   Zend = brain.z_end,
+                                                   output_dir = output_dir
+                                        ))
 
 #############################
 # Step 3: Run stacks_to_volume.py
@@ -357,7 +388,7 @@ def tv_recon_pipeline(options):
     return Result(stages=s, output=())
 
 tv_recon_application = mk_application(parsers = [TV_stitch_parser,
-                                                 cellprofiler_parser,
+                                                 deep_segment_parser,
                                                  stacks_to_volume_parser,
                                                  autocrop_parser],
                                       pipeline = tv_recon_pipeline)

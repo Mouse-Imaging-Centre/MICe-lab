@@ -59,6 +59,37 @@ CellprofilerMemCfg = NamedTuple("CellprofilerMemCfg",
 
 default_cellprofiler_mem_cfg = CellprofilerMemCfg(base_mem=14, mem_per_size=2e-7)
 
+def deep_segment(stitched: List[FileAtom],
+                 deep_segment_pipeline: FileAtom,
+                 anatomicals: List[FileAtom],
+                 counts: List[FileAtom],
+                 Zstart: int,
+                 Zend: int,
+                 output_dir: str
+                 ):
+    s = Stages()
+    def set_memory(stage: CmdStage, mem_cfg: NamedTuple, z):
+        img_size = os.stat(stitched[0].path).st_size
+        stage.setMem(mem_cfg.base_mem + img_size * mem_cfg.mem_per_size)
+
+    for z in range (1, Zend + 2 - Zstart):
+        stage = CmdStage(inputs=(stitched+[deep_segment_pipeline]),
+                         outputs=(anatomicals[z-1], counts[z-1]),
+                         cmd=['deep_segment.py',
+                              '--learner %s' % deep_segment_pipeline.path,
+                              '--anatomical-output %s' % anatomicals[z-1].path,
+                              '--centroids-output %s' % counts[z-1].path
+                              ],
+                         log_file=os.path.join(output_dir, "deep_segment.log"))
+
+
+        #z=z is evaluated at this point, to avoid the problem of how python handles evironment.
+        stage.when_runnable_hooks.append(lambda s, z=z:
+                                         set_memory(s, default_cellprofiler_mem_cfg, z))
+
+        s.add(stage)
+    return Result(stages=s, output=(anatomicals, counts))
+
 def stacks_to_volume( slices: List[FileAtom],
                       volume: MincAtom,
                       z_resolution: float,
