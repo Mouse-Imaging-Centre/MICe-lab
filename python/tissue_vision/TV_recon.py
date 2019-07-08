@@ -117,42 +117,6 @@ def tv_recon_pipeline(options):
                                                       output_dir=output_dir
                                                       ))
 
-#TODO write a when_finished_hook to tell the user that this finished.
-#############################
-# Step 2: Run cellprofiler
-#############################
-        anatomical = options.cellprofiler.anatomical_name
-        count = options.cellprofiler.count_name
-
-        brain.cp_directory = os.path.join(output_dir, pipeline_name + "_cellprofiler", brain.name)
-        brain.batch_data = FileAtom(os.path.join(brain.cp_directory,"Batch_data.h5"))
-
-        overLays = []
-        anatomicals = []
-        counts = []
-
-        for z in range(brain.z_start, brain.z_end+1):
-            brain.slice_overLay = FileAtom(
-                os.path.join(brain.cp_directory, brain.name + "_Z%04d_overLay.tiff" % z))
-            brain.slice_anatomical = FileAtom(
-                os.path.join(brain.cp_directory, brain.name + "_Z%04d_" % z + anatomical + ".tiff"))
-            brain.slice_count = FileAtom(
-                os.path.join(brain.cp_directory, brain.name + "_Z%04d_" % z + count + ".tiff"))
-            overLays.append(brain.slice_overLay)
-            anatomicals.append(brain.slice_anatomical)
-            counts.append(brain.slice_count)
-
-        cellprofiler_result = s.defer(cellprofiler_wrap(stitched = stitched,
-                                                              cellprofiler_pipeline = cppline,
-                                                              batch_data = brain.batch_data,
-                                                              overLays = overLays,
-                                                              anatomicals = anatomicals,
-                                                              count = counts,
-                                                              Zstart = brain.z_start,
-                                                              Zend = brain.z_end,
-                                                              output_dir = output_dir
-                                                             ))
-
 #############################
 # Step 3: Run stacks_to_volume.py
 #############################
