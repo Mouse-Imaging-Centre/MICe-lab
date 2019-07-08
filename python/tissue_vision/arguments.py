@@ -92,40 +92,6 @@ TV_stitch_parser = AnnotatedParser(parser=BaseParser(_mk_TV_stitch_parser(), "TV
 
 #############################################
 
-def _mk_cellprofiler_parser():
-    p = ArgParser(add_help=False)
-    p.add_argument("--cellprofiler-pipeline", dest="cellprofiler_pipeline",
-                   type=str,
-                   default=None,
-                   help="Load this pipeline file or project on startup")
-    # p.add_argument("--image-directory", dest="image_directory",
-    #                type=str,
-    #                default=None,
-    #                help="Make this directory the default input folder")
-    # p.add_argument("--output-directory", dest="output_directory",
-    #                type=str,
-    #                default=None,
-    #                help="Make this directory the default output folder")
-    # p.add_argument("--first-image-set", dest="first_image_set",
-    #                type=int,
-    #                default=None,
-    #                help="The one-based index of the first image set to process")
-    # p.add_argument("--last-image-set", dest="last_image_set",
-    #                type=int,
-    #                default=None,
-    #                help="The one-based index of the last image set to process")
-    p.add_argument("--count-name", dest="count_name",
-                   type=str,
-                   default=None,
-                   help="Specify the name of the counts images outputted by cellprofiler.")
-    p.add_argument("--anatomical-name", dest="anatomical_name",
-                   type=str,
-                   default=None,
-                   help="Specify the name of the anatomical images outputted by cellprofiler.")
-    return p
-
-cellprofiler_parser = AnnotatedParser(parser=BaseParser(_mk_cellprofiler_parser(), "cellprofiler"),
-                                      namespace="cellprofiler")
 
 #############################################
 
