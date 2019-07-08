@@ -92,6 +92,24 @@ TV_stitch_parser = AnnotatedParser(parser=BaseParser(_mk_TV_stitch_parser(), "TV
 
 #############################################
 
+def _mk_deep_segment_parser():
+    p = ArgParser(add_help=False)
+    p.add_argument("--segmentation-pipeline", dest="segmentation_pipeline",
+                   type=str,
+                   default=None,
+                   help="This is the segmentation pipeline")
+    p.add_argument("--anatomical-name", dest="anatomical_name",
+                   type=str,
+                   default="cropped",
+                   help="Specify the name of the anatomical images outputted by deep_segment.py")
+    p.add_argument("--count-name", dest="count_name",
+                   type=str,
+                   default="count",
+                   help="Specify the name of the count images outputted by deep_segment.py")
+    return p
+
+deep_segment_parser = AnnotatedParser(parser=BaseParser(_mk_deep_segment_parser(), "deep_segment"),
+                                      namespace="deep_segment")
 
 #############################################
 
