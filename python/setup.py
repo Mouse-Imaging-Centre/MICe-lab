@@ -35,6 +35,7 @@ setup(name="MICe-lab",
                'tissue_vision/TV_pipeline.py',
                'tissue_vision/TV_recon.py',
                'tissue_vision/TV_stitch.py',
+               'tissue_vision/stacks_to_volume.py',
                'tissue_vision/MIP_first.py',
                ],
       )
