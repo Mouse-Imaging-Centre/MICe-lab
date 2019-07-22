@@ -65,13 +65,15 @@ def deep_segment(stitched: List[FileAtom],
                  counts: List[FileAtom],
                  Zstart: int,
                  Zend: int,
-                 output_dir: str
+                 output_dir: str,
+                 temp_dir: str = None,
                  ):
     s = Stages()
     for z in range (1, Zend + 2 - Zstart):
         stage = CmdStage(inputs=(stitched+[deep_segment_pipeline]),
                          outputs=(anatomicals[z-1], counts[z-1]),
                          cmd=['deep_segment.py',
+                              '--temp-dir %s' % temp_dir if temp_dir else "",
                               '--learner %s' % deep_segment_pipeline.path,
                               '--image %s' % stitched[z-1].path,
                               '--anatomical-output %s' % anatomicals[z-1].path,

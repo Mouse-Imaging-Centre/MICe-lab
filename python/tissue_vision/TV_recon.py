@@ -145,7 +145,8 @@ def tv_recon_pipeline(options):
                                                    counts = counts,
                                                    Zstart = brain.z_start,
                                                    Zend = brain.z_end,
-                                                   output_dir = output_dir
+                                                   output_dir = output_dir,
+                                                   temp_dir = options.deep_segment.temp_dir
                                         ))
 
 #############################

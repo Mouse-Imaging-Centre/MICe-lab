@@ -94,6 +94,7 @@ TV_stitch_parser = AnnotatedParser(parser=BaseParser(_mk_TV_stitch_parser(), "TV
 
 def _mk_deep_segment_parser():
     p = ArgParser(add_help=False)
+    p.add_argument("--temp-dir", dest="temp_dir", type=str, default=None)
     p.add_argument("--deep-segment-pipeline", dest="deep_segment_pipeline",
                    type=str,
                    default=None,
