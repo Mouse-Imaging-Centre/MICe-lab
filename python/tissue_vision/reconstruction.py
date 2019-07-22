@@ -76,7 +76,7 @@ def deep_segment(stitched: List[FileAtom],
                               '--temp-dir %s' % temp_dir if temp_dir else "",
                               '--learner %s' % deep_segment_pipeline.path,
                               '--image %s' % stitched[z-1].path,
-                              '--anatomical-output %s' % anatomicals[z-1].path,
+                              '--image-output %s' % anatomicals[z-1].path,
                               '--centroids-output %s' % counts[z-1].path
                               ],
                          log_file=os.path.join(output_dir, "deep_segment.log"))
