@@ -1,6 +1,7 @@
 import os
+from typing import Dict, List, Union
 
-from typing import Dict, List
+import pandas as pd
 
 from pydpiper.core.stages import Stages, Result, CmdStage
 from pydpiper.core.files import FileAtom
@@ -10,6 +11,31 @@ from pydpiper.core.util import NamedTuple
 import pyminc.volumes.factory as pyminc
 
 import numpy as np
+
+class Brain(object):
+    def __init__(self,
+                 brain_directory: FileAtom,
+                 name: str,
+                 z_start: Union[int,None],
+                 z_end: Union[int,None],
+                 z_section: Union[int,None],
+                 ) -> None:
+        self.brain_directory = brain_directory
+        self.name = name
+        self.z_start = z_start
+        self.z_end = z_end
+        self.z_section = z_section
+
+def get_brains(options):
+    if options.files:
+        raise ValueError("you used --files; please use --csv-file")
+
+    csv = pd.read_csv(options.csv_file, dtype='str')
+
+    brains = [Brain(FileAtom(brain_directory), brain_name, z_start, z_end, z_section)
+              for brain_directory, brain_name, z_start, z_end,z_section
+              in zip(csv.brain_directory, csv.brain_name, csv.Zstart, csv.Zend, csv.Zsection)]
+    return brains
 
 def TV_stitch_wrap(brain_directory: FileAtom,
                    brain_name: str,
