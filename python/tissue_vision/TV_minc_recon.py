@@ -1,55 +1,19 @@
 #!/usr/bin/env python3
-
 import os
-import sys
-
-from configargparse import Namespace, ArgParser
-from typing import Dict, List, Union
 
 import pandas as pd
 
 from pydpiper.core.stages import Stages, Result
-from pydpiper.core.arguments import CompoundParser, AnnotatedParser, BaseParser
-from pydpiper.core.util import maybe_deref_path
-from pydpiper.execution.application import execute, mk_application
+from pydpiper.execution.application import mk_application
 from pydpiper.core.files import FileAtom
-from pydpiper.core.arguments import application_parser, registration_parser, execution_parser, parse
 from pydpiper.minc.files import MincAtom
-from pydpiper.minc.registration import autocrop, create_quality_control_images, check_MINC_input_files, lsq12_nlin, \
-    get_linear_configuration_from_options, LinearTransType, get_nonlinear_component, \
-    get_registration_targets_from_init_model, xfmconcat
-from pydpiper.pipelines.MBM import mbm, mk_mbm_parser
+from pydpiper.minc.registration import autocrop, create_quality_control_images
 
-from tissue_vision.arguments import TV_stitch_parser, deep_segment_parser, stacks_to_volume_parser, autocrop_parser
+from tissue_vision.arguments import deep_segment_parser, stacks_to_volume_parser, autocrop_parser
 
 from tissue_vision.reconstruction import TV_stitch_wrap, deep_segment, stacks_to_volume, \
-    antsRegistration, get_like, tif_to_minc, get_through_plane_xfm, concat_xfm, mincmath
-from tissue_vision.TV_stitch import get_params
+    antsRegistration, get_like, tif_to_minc, get_through_plane_xfm, concat_xfm, mincmath, get_brains, Brain
 
-class Brain(object):
-    def __init__(self,
-                 brain_directory: FileAtom,
-                 name: str,
-                 z_start: Union[int,None],
-                 z_end: Union[int,None],
-                 z_section: Union[int,None],
-                 ) -> None:
-        self.brain_directory = brain_directory
-        self.name = name
-        self.z_start = z_start
-        self.z_end = z_end
-        self.z_section = z_section
-
-def get_brains(options):
-    if options.files:
-        raise ValueError("you used --files; please use --csv-file")
-
-    csv = pd.read_csv(options.csv_file, dtype='str')
-
-    brains = [Brain(FileAtom(brain_directory), brain_name, z_start, z_end, z_section)
-              for brain_directory, brain_name, z_start, z_end,z_section
-              in zip(csv.brain_directory, csv.brain_name, csv.Zstart, csv.Zend, csv.Zsection)]
-    return brains
 
 
 def tv_recon_pipeline(options):
@@ -68,57 +32,9 @@ def tv_recon_pipeline(options):
     all_atlas_resampled = []
 
 #############################
-# Step 1: Run TV_stitch.py
-#############################
-    for brain in brains:
-        slice_directory = os.path.join(output_dir, pipeline_name + "_stitched", brain.name)
-
-        stitched = []
-        brain.x, brain.y, brain.z, brain.z_resolution = \
-            get_params(os.path.join(brain.brain_directory.path, brain.name))
-
-        #accounting for errors in tile acquisition
-        brain.z_start = 1 if pd.isna(brain.z_start) else int(brain.z_start)
-        brain.z_end = brain.z if pd.isna(brain.z_end) else int(brain.z_end)
-        brain.z_section = None if pd.isna(brain.z_section) else int(brain.z_section)
-
-        for z in range (brain.z_start, brain.z_end + 1):
-            brain.slice_stitched = FileAtom(os.path.join(slice_directory, brain.name + "_Z%04d.tif" % z))
-            stitched.append(brain.slice_stitched)
-
-        if not brain.z_section:
-            TV_stitch_result = s.defer(TV_stitch_wrap(brain_directory = brain.brain_directory,
-                                                    brain_name = brain.name,
-                                                    stitched = stitched,
-                                                    TV_stitch_options = options.TV_stitch,
-                                                    Zstart=brain.z_start,
-                                                    Zend=brain.z_end,
-                                                    output_dir = output_dir
-                                                    ))
-
-        if brain.z_section:
-            TV_stitch_result = s.defer(TV_stitch_wrap(brain_directory=brain.brain_directory,
-                                                      brain_name=brain.name,
-                                                      stitched=stitched[0 : brain.z_section - brain.z_start],
-                                                      TV_stitch_options=options.TV_stitch,
-                                                      Zstart=brain.z_start,
-                                                      Zend=brain.z_section - 1,
-                                                      output_dir=output_dir
-                                                      ))
-
-            TV_stitch_result = s.defer(TV_stitch_wrap(brain_directory=brain.brain_directory,
-                                                      brain_name=brain.name,
-                                                      stitched=stitched[brain.z_section - brain.z_start:brain.z_end-1],
-                                                      TV_stitch_options=options.TV_stitch,
-                                                      Zstart=brain.z_section,
-                                                      Zend=brain.z_end,
-                                                      output_dir=output_dir
-                                                      ))
-
-#TODO write a when_finished_hook to tell the user that this finished.
-#############################
 # Step 2: Run deep_segment.py
 #############################
+    for brain in brains:
         anatomical = options.deep_segment.anatomical_name
         count = options.deep_segment.count_name
 
@@ -388,8 +304,7 @@ def tv_recon_pipeline(options):
                                           message="%s_mincs" % count))
     return Result(stages=s, output=())
 
-tv_recon_application = mk_application(parsers = [TV_stitch_parser,
-                                                 deep_segment_parser,
+tv_recon_application = mk_application(parsers = [deep_segment_parser,
                                                  stacks_to_volume_parser,
                                                  autocrop_parser],
                                       pipeline = tv_recon_pipeline)
