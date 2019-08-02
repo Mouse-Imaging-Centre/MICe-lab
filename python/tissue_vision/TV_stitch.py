@@ -212,47 +212,6 @@ def run_cvFilter(infile,outfile,kernelstr="gauss",kernelwidth=9,filtwidth=1.4):
     cmdout = run_subprocess(cmdstr)
     return 0
 
-#TODO this is duplicated code... really annoying
-def get_params(input: string):
-    # find and compose list of directories to work with
-    try:
-        fulldirectorylist = glob.glob(input + '-[0-9]*')
-        if not fulldirectorylist:
-            raise FatalError("Cannot find brain's slice subdirectories in %s" % input)
-    except FatalError as e:
-        print('Error(%s):' % program_name, e.msg)
-        raise SystemExit
-    # refine and sort directory list
-    direclist = []
-    inputdirhead, junk, input_prefix = input.rpartition('/')
-    reprog = re.compile(input_prefix + '[0-9-]*\Z')
-    for cname in fulldirectorylist:
-        m = reprog.search(cname)
-        if (m != None): direclist.append(inputdirhead + '/' + m.group(0))
-    direclist.sort()
-    # read #X,#Y,#Zpeizo from first Mosaic text file
-    TVscanfile = direclist[0] + '/' + 'Mosaic_' + direclist[0].rsplit('/')[-1] + '.txt'
-    TVparamdict = TV_parameters(TVscanfile)
-    (N_x, N_y, N_z_slices, N_z_piezo, z_resolution) = (TVparamdict['mcolumns'],
-                                         TVparamdict['mrows'],
-                                         TVparamdict['sections'],
-                                         [1, TVparamdict['layers']][TVparamdict['Zscan']],
-                                         TVparamdict['sectionres']/1000)
-    if (len(direclist) != N_z_slices):
-        #TODO change this to a warning
-        print("Mismatch in Mosaic file 'sections' (%d) and number of identified directories (%d); Don't worry for now." % (
-        N_z_slices, len(direclist)))
-        N_z_slices = len(direclist)
-        TVparamdict['sections'] = N_z_slices
-    try:
-        globlist = glob.glob(direclist[0] + '/' + '*-*-*' + '_%02d.' % 1 + 'tif') #channelflag=1, imgftype='tif'
-        if (len(globlist) == 0):
-            raise FatalError("Cannot find files for the specified channel.")
-    except FatalError as e:
-        print('Error(%s):' % program_name, e.msg)
-        raise SystemExit
-    return N_x, N_y, N_z_slices, z_resolution
-
 def generate_preprocessed_images(inputdirectory,starts=[None,None,None],ends=[None,None,None],channelflag=1,\
                                  imgftype='tif',fastpiezoloop=False,gradcombine=False,im=False,
                                  corr_tile_nonuniformity=False,medfilter_tile=False,medfilter_size=3):
