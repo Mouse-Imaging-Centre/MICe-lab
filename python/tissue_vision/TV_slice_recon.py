@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os, re
+from pathlib import Path; Path.ls = lambda x: list(x.iterdir())
+from math import isnan
 from typing import  Union, Dict
 
 import pandas as pd
@@ -11,7 +13,12 @@ from pydpiper.execution.application import mk_application
 from tissue_vision.reconstruction import TV_stitch_wrap
 from tissue_vision.arguments import TV_stitch_parser
 
-def read_mosaic(file: str) -> Dict:
+def find_mosaic_file(row) -> str:
+    if len(sorted(Path(row.brain_directory).glob("Mosaic*txt"))) > 1:
+        raise Exception("There are more than one Mosaic files found in %s" % row.brain_directory)
+    return sorted(Path(row.brain_directory).glob("Mosaic*txt"))[0]
+
+def read_mosaic_file(file: str) -> Dict:
     with open(file) as f: mosaic = f.read()
     keys = re.findall(r"(?<=\n).*?(?=:)", "\n" + mosaic)
     values = re.findall(r"(?<=:).*?(?=\n)", mosaic + "\n")
@@ -23,35 +30,38 @@ def tv_slice_recon_pipeline(options):
 
     s = Stages()
 
-    df = pd.read_csv(options.application.csv_file)
-    brains = get_brains(options.application)  # List(Brain,...)
+    df = pd.read_csv(options.application.csv_file,
+                     dtype={"brain_name":str, "brain_directory":str})
+    # transforms = (mbm_result.xfms.assign(
+    #     native_file=lambda df: df.rigid_xfm.apply(lambda x: x.source),
+
+    df["mosaic_file"] = df.apply(lambda row: find_mosaic_file(row), axis = 1)
+    df["mosaic_dictionary"] = df.apply(lambda row: read_mosaic_file(row.mosaic_file), axis = 1)
+    df["number_of_slices"] = df.apply(lambda row: int(row.mosaic_dictionary["sections"]), axis = 1)
+    df["interslice_distance"] = df.apply(lambda row: float(row.mosaic_dictionary["sectionres"])/1000, axis = 1)
+    df["Zstart"] = df.apply(lambda row: 1 if isnan(row.Zstart) else row.Zstart, axis = 1)
+    df["Zend"] = df.apply(lambda row: row.number_of_slices - row.Zstart + 1 if isnan(row.Zend) else row.Zend, axis=1)
+    df["slice_directory"] = df.apply(lambda row: os.path.join(output_dir, pipeline_name + "_stitched", row.brain_name), axis=1)
+
 #############################
 # Step 1: Run TV_stitch.py
 #############################
-    for brain in brains:
-        slice_directory = os.path.join(output_dir, pipeline_name + "_stitched", brain.name)
-
+    for index, row in df.iterrows():
         stitched = []
-        brain.x, brain.y, brain.z, brain.z_resolution = \
-            get_params(os.path.join(brain.brain_directory.path, brain.name))
 
-        #accounting for errors in tile acquisition
-        brain.z_start = 1 if pd.isna(brain.z_start) else int(brain.z_start)
-        brain.z_end = brain.z if pd.isna(brain.z_end) else int(brain.z_end)
+        for z in range (row.Zstart, row.Zend + 1):
+            row.slice_stitched = FileAtom(os.path.join(row.slice_directory, row.brain_name + "_Z%04d.tif" % z))
+            stitched.append(row.slice_stitched)
 
-        for z in range (brain.z_start, brain.z_end + 1):
-            brain.slice_stitched = FileAtom(os.path.join(slice_directory, brain.name + "_Z%04d.tif" % z))
-            stitched.append(brain.slice_stitched)
-
-        if not brain.z_section:
-            TV_stitch_result = s.defer(TV_stitch_wrap(brain_directory = brain.brain_directory,
-                                                    brain_name = brain.name,
-                                                    stitched = stitched,
-                                                    TV_stitch_options = options.TV_stitch,
-                                                    Zstart=brain.z_start,
-                                                    Zend=brain.z_end,
-                                                    output_dir = output_dir
-                                                    ))
+        TV_stitch_result = s.defer(TV_stitch_wrap(brain_directory = FileAtom(row.brain_directory),
+                                                brain_name = row.brain_name,
+                                                stitched = stitched,
+                                                TV_stitch_options = options.TV_stitch,
+                                                Zstart=row.Zstart,
+                                                Zend=row.Zend,
+                                                output_dir = output_dir
+                                                ))
+        df.drop(["mosaic_dictionary"], axis=1).to_csv("TV_slices.csv", index=False)
     return Result(stages=s, output=())
 
 tv_slice_recon_application = mk_application(parsers=[TV_stitch_parser],
