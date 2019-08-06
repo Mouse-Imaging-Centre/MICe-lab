@@ -46,22 +46,21 @@ def tv_slice_recon_pipeline(options):
 #############################
 # Step 1: Run TV_stitch.py
 #############################
+    df = df.assign(TV_stitch_result = "")
     for index, row in df.iterrows():
-        stitched = []
-
-        for z in range (row.Zstart, row.Zend + 1):
-            row.slice_stitched = FileAtom(os.path.join(row.slice_directory, row.brain_name + "_Z%04d.tif" % z))
-            stitched.append(row.slice_stitched)
-
-        TV_stitch_result = s.defer(TV_stitch_wrap(brain_directory = FileAtom(row.brain_directory),
-                                                brain_name = row.brain_name,
-                                                stitched = stitched,
-                                                TV_stitch_options = options.TV_stitch,
-                                                Zstart=row.Zstart,
-                                                Zend=row.Zend,
-                                                output_dir = output_dir
-                                                ))
-        df.drop(["mosaic_dictionary"], axis=1).to_csv("TV_slices.csv", index=False)
+        df.at[index,"TV_stitch_result"] = s.defer(TV_stitch_wrap(brain_directory = FileAtom(row.brain_directory),
+                                                                 brain_name = row.brain_name,
+                                                                 slice_directory = row.slice_directory,
+                                                                 TV_stitch_options = options.TV_stitch,
+                                                                 Zstart=row.Zstart,
+                                                                 Zend=row.Zend,
+                                                                 output_dir = output_dir
+                                                                 ))
+    df.drop(["mosaic_dictionary", "TV_stitch_result"], axis=1).to_csv("TV_brains.csv", index=False)
+    df.explode("TV_stitch_result")\
+        .assign(slice=lambda df: df.apply(lambda row: row.TV_stitch_result.path, axis=1))\
+        .drop(["mosaic_dictionary", "TV_stitch_result"], axis=1)\
+        .to_csv("TV_slices.csv", index=False)
     return Result(stages=s, output=())
 
 tv_slice_recon_application = mk_application(parsers=[TV_stitch_parser],

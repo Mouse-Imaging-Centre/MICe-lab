@@ -16,12 +16,17 @@ import numpy as np
 
 def TV_stitch_wrap(brain_directory: FileAtom,
                    brain_name: str,
-                   stitched: List[FileAtom],
+                   slice_directory: str,
                    TV_stitch_options,
                    Zstart: int,
                    Zend: int,
                    output_dir: str):
 #TODO inputs should be tiles not just brain_directory
+    stitched = []
+    for z in range(Zstart, Zend + 1):
+        slice_stitched = FileAtom(os.path.join(slice_directory, brain_name + "_Z%04d.tif" % z))
+        stitched.append(slice_stitched)
+
     stage = CmdStage(inputs=(brain_directory,), outputs=tuple(stitched),
                      cmd=['TV_stitch.py', '--clobber',
                           #'--verbose',
