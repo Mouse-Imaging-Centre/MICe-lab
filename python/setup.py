@@ -19,7 +19,8 @@ setup(name="MICe-lab",
         'matplotlib',
         'Pillow',
         'fastai',
-        'opencv-python'
+        'opencv-python',
+        'pandas>=0.25'
       ],
       dependency_links=['https://github.com/opencv/opencv/archive/3.1.0.tar.gz',
                         'https://github.com/Mouse-Imaging-Centre/pydpiper',
