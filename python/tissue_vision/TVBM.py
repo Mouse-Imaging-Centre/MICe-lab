@@ -1,29 +1,20 @@
 #!/usr/bin/env python3
 
 import os
-import sys
-
-from configargparse import Namespace, ArgParser
-from typing import Dict, List, Union
 
 import pandas as pd
 
 from pydpiper.core.stages import Stages, Result
-from pydpiper.core.arguments import CompoundParser, AnnotatedParser, BaseParser, _mk_lsq6_parser, to_lsq6_conf
+from pydpiper.core.arguments import AnnotatedParser, BaseParser, _mk_lsq6_parser, to_lsq6_conf
 from pydpiper.core.util import maybe_deref_path
-from pydpiper.execution.application import execute, mk_application
-from pydpiper.core.files import FileAtom
-from pydpiper.core.arguments import application_parser, registration_parser, execution_parser, parse
+from pydpiper.execution.application import mk_application
 from pydpiper.minc.files import MincAtom
-from pydpiper.minc.registration import autocrop, create_quality_control_images, check_MINC_input_files, lsq12_nlin, \
-    get_linear_configuration_from_options, LinearTransType, get_nonlinear_component, \
-    get_registration_targets_from_init_model, xfmconcat, mincresample_new
+from pydpiper.minc.registration import autocrop, create_quality_control_images, lsq12_nlin, \
+    get_linear_configuration_from_options, LinearTransType, get_nonlinear_component, xfmconcat, mincresample_new
 from pydpiper.pipelines.MBM import mbm, mk_mbm_parser
 from pydpiper.pipelines.MAGeT import Interpolation
 
 from tissue_vision.arguments import consensus_to_atlas_parser
-from tissue_vision.reconstruction import TV_stitch_wrap, cellprofiler_wrap, stacks_to_volume, \
-    antsRegistration, get_like, get_through_plane_xfm, concat_xfm, mincmath
 
 def get_imgs(options):
     if options.files:
