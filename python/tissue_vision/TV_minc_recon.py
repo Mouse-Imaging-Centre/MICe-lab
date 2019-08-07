@@ -18,159 +18,139 @@ def tv_recon_pipeline(options):
 
     s = Stages()
 
-    brains = get_brains(options.application) # List(Brain,...)
-
-    # Hold results obtained in the loop
-    all_anatomical_pad_results = []
-    all_count_pad_results = []
-    reconstructed_mincs = []
-    all_count_resampled = []
-    all_atlas_resampled = []
+    slices_df = pd.read_csv(options.application.csv_file,
+                     dtype={"brain_name": str, "brain_directory": str, "slice_directory": str})
 
 #############################
-# Step 2: Run deep_segment.py
+# Step 1: Run deep_segment.py
 #############################
-    for brain in brains:
-        anatomical = options.deep_segment.anatomical_name
-        count = options.deep_segment.count_name
-
-        brain.ds_directory = os.path.join(output_dir, pipeline_name + "_deep_segmentation", brain.name)
-
-        outlines = []
-        anatomicals = []
-        counts = []
-
-        for z in range(brain.z_start, brain.z_end+1):
-            brain.slice_outline = FileAtom(
-                os.path.join(brain.ds_directory, brain.name + "_Z%04d_outline.tiff" % z))
-            brain.slice_anatomical = FileAtom(
-                os.path.join(brain.ds_directory, brain.name + "_Z%04d_" % z + anatomical + ".tiff"))
-            brain.slice_count = FileAtom(
-                os.path.join(brain.ds_directory, brain.name + "_Z%04d_" % z + count + ".tiff"))
-            outlines.append(brain.slice_outline)
-            anatomicals.append(brain.slice_anatomical)
-            counts.append(brain.slice_count)
-
-        deep_segment_result = s.defer(deep_segment(stitched = stitched,
-                                                   deep_segment_pipeline = FileAtom(options.deep_segment.deep_segment_pipeline),
-                                                   anatomicals = anatomicals,
-                                                   counts = counts,
-                                                   Zstart = brain.z_start,
-                                                   Zend = brain.z_end,
-                                                   output_dir = output_dir,
-                                                   temp_dir = options.deep_segment.temp_dir
-                                        ))
+    #TODO surely theres a way around deep_segment_result=""?
+    slices_df = slices_df.assign(
+        deep_segment_result="",
+        segmentation_directory = lambda df: df.apply(
+            lambda row: os.path.join(output_dir, pipeline_name + "_deep_segmentation", row.brain_name), axis=1)
+    )
+    for index, row in slices_df.iterrows():
+        slices_df.at[index,"deep_segment_result"] = s.defer(deep_segment(image = FileAtom(row.slice,
+                                                                                          output_sub_dir = row.segmentation_directory),
+                                                                         deep_segment_pipeline = FileAtom(options.deep_segment.deep_segment_pipeline),
+                                                                         anatomical_suffix = options.deep_segment.anatomical_name,
+                                                                         count_suffix = options.deep_segment.count_name,
+                                                                         temp_dir = options.deep_segment.temp_dir
+                                                                         ))
+        #hacky solution requires deep_segment() returns in that order
+        #https://stackoverflow.com/questions/35491274/pandas-split-column-of-lists-into-multiple-columns
+        slices_df[["anatomical_result", "count_result", "outline_result"]] = \
+            pd.DataFrame(slices_df.deep_segment_result.values.tolist())
 
 #############################
-# Step 3: Run stacks_to_volume.py
+# Step 2: Run stacks_to_volume.py
 #############################
-        anatomical_volume = MincAtom(os.path.join(output_dir, pipeline_name + "_stacked",
-                                                  brain.name + "_" + anatomical + "_stacked.mnc"),
-                                 output_sub_dir=os.path.join(output_dir, pipeline_name + "_stacked"))
-        count_volume = MincAtom(os.path.join(output_dir, pipeline_name + "_stacked",
-                                      brain.name + "_" + count + "_stacked.mnc"),
-                                 output_sub_dir=os.path.join(output_dir, pipeline_name + "_stacked"))
+    mincs_df = slices_df.drop(['slice', 'deep_segment_result', "anatomical_result", "count_result", "outline_result"], axis=1) \
+        .drop_duplicates().reset_index(drop=True)\
+        .assign(
+        anatomical_list = slices_df.groupby("brain_name")['anatomical_result'].apply(list).reset_index(drop=True),
+        count_list=slices_df.groupby("brain_name")['count_result'].apply(list).reset_index(drop=True),
+        #the above is so hacky...
+        stacked_directory=lambda df: df.apply(
+            lambda row: os.path.join(output_dir, pipeline_name + "_stacked", row.brain_name), axis=1),
+    )
+    mincs_df = mincs_df.assign(
+        anatomical_stacked_MincAtom=lambda df: df.apply(
+            lambda row: MincAtom(
+                os.path.join(row.stacked_directory,
+                             row.brain_name + "_" + options.deep_segment.anatomical_name + "_stacked.mnc")
+            ), axis=1
+        ),
+        count_stacked_MincAtom=lambda df: df.apply(
+            lambda row: MincAtom(
+                os.path.join(row.stacked_directory,
+                             row.brain_name + "_" + options.deep_segment.count_name + "_stacked.mnc")
+            ), axis=1
+        )
+    )
 
-        anatomical_slices_to_volume_results = s.defer(stacks_to_volume(
-            slices = anatomicals,
-            volume = anatomical_volume,
+    for index, row in mincs_df.iterrows():
+        s.defer(stacks_to_volume(
+            slices = row.anatomical_list,
+            output_volume = row.anatomical_stacked_MincAtom,
+            z_resolution = row.interslice_distance,
             stacks_to_volume_options=options.stacks_to_volume,
-            uniform_sum=False,
-            z_resolution=brain.z_resolution,
-            output_dir=output_dir
-            ))
-
-        count_slices_to_volume_results = s.defer(stacks_to_volume(
-            slices = counts,
-            volume = count_volume,
-            stacks_to_volume_options=options.stacks_to_volume,
-            z_resolution=brain.z_resolution,
-            uniform_sum = True,
-            output_dir=output_dir
-            ))
-
-#############################
-# Step 4: Run autocrop to resample to isotropic
-#############################
-        anatomical_volume_isotropic = MincAtom(os.path.join(output_dir, pipeline_name + "_stacked",
-                                                        brain.name + "_" + anatomical + "_stacked_isotropic.mnc"),
-                                 output_sub_dir=os.path.join(output_dir, pipeline_name + "_stacked"))
-        anatomical_volume_isotropic_results = s.defer(autocrop(
-            isostep = options.stacks_to_volume.plane_resolution,
-            img = anatomical_volume,
-            autocropped = anatomical_volume_isotropic
+            uniform_sum=False
         ))
-
-        count_volume_isotropic = MincAtom(os.path.join(output_dir, pipeline_name + "_stacked",
-                                                 brain.name + "_" + count + "_stacked_isotropic.mnc"),
-                                 output_sub_dir=os.path.join(output_dir, pipeline_name + "_stacked"))
-        count_volume_isotropic_results = s.defer(autocrop(
+        s.defer(stacks_to_volume(
+            slices=row.count_list,
+            output_volume=row.count_stacked_MincAtom,
+            z_resolution=row.interslice_distance,
+            stacks_to_volume_options=options.stacks_to_volume,
+            uniform_sum=True
+        ))
+#############################
+# Step 3: Run autocrop to resample to isotropic
+#############################
+    for index, row in mincs_df.iterrows():
+        mincs_df.at[index,"anatomical_isotropic_result"] = s.defer(autocrop(
             isostep = options.stacks_to_volume.plane_resolution,
-            img = count_volume,
-            autocropped = count_volume_isotropic,
+            img = row.anatomical_stacked_MincAtom,
+            suffix = "isotropic"
+        ))
+        mincs_df.at[index, "count_isotropic_result"] = s.defer(autocrop(
+            isostep=options.stacks_to_volume.plane_resolution,
+            img=row.anatomical_stacked_MincAtom,
+            suffix="isotropic",
             nearest_neighbour = True
         ))
 
 #############################
-# Step 5: Run autocrop to pad the isotropic images
+# Step 4: Run autocrop to pad the isotropic images
 #############################
-        x_pad = options.autocrop.x_pad
-        y_pad = options.autocrop.y_pad
-        z_pad = options.autocrop.z_pad
-
-        anatomical_padded = MincAtom(os.path.join(output_dir, pipeline_name + "_stacked",
-                                              brain.name + "_" + anatomical + "_padded.mnc"))
-        anatomical_pad_results = s.defer(autocrop(
-            img = anatomical_volume_isotropic,
-            autocropped = anatomical_padded,
-            x_pad = x_pad,
-            y_pad = y_pad,
-            z_pad = z_pad
+    #TODO make this step optional
+    for index, row in mincs_df.iterrows():
+        mincs_df.at[index, "anatomical_padded_result"] = s.defer(autocrop(
+            img=row.anatomical_isotropic_result,
+            x_pad=options.autocrop.x_pad,
+            y_pad=options.autocrop.y_pad,
+            z_pad=options.autocrop.z_pad,
+            suffix="padded"
         ))
-        all_anatomical_pad_results.append(anatomical_pad_results)
-        reconstructed_mincs.append(anatomical_pad_results)
-
-        count_padded = MincAtom(os.path.join(output_dir, pipeline_name + "_stacked",
-                                                        brain.name + "_" + count + "_padded.mnc"))
-        count_resampled = MincAtom(os.path.join(output_dir, pipeline_name + "_resampled",
-                                          brain.name + "_" + count + "_resampled.mnc"))
-        atlas_resampled = MincAtom(os.path.join(output_dir, pipeline_name + "_resampled",
-                                          "atlas_to_" + brain.name + "_resampled.mnc"))
-        count_pad_results = s.defer(autocrop(
-            img = count_volume_isotropic,
-            autocropped = count_padded,
-            x_pad = x_pad,
-            y_pad = y_pad,
-            z_pad = z_pad
+        mincs_df.at[index, "count_padded_result"] = s.defer(autocrop(
+            img=row.anatomical_isotropic_result,
+            x_pad=options.autocrop.x_pad,
+            y_pad=options.autocrop.y_pad,
+            z_pad=options.autocrop.z_pad,
+            suffix="padded"
         ))
-        all_count_pad_results.append(count_pad_results)
-        all_count_resampled.append(count_resampled)
-        all_atlas_resampled.append(atlas_resampled)
-        reconstructed_mincs.append(count_pad_results)
 
-    csv_file = pd.read_csv(options.application.csv_file)
-    reconstructed = pd.DataFrame({'brain_directory': [brain.brain_directory.path for brain in brains],
-                                  'z_slices': [brain.z for brain in brains],
-                                  'z_resolution': [brain.z_resolution for brain in brains],
-                                  'anatomical_padded': [anatomical_padded.path for anatomical_padded in all_anatomical_pad_results],
-                                  'count_padded': [count_padded.path for count_padded in all_count_pad_results]})
+#############################
+    slices_df = slices_df.assign(
+        anatomical_slice = lambda df: df.apply(lambda row: row.anatomical_result.path, axis=1),
+        count_slice=lambda df: df.apply(lambda row: row.count_result.path, axis=1),
+        outline_slice=lambda df: df.apply(lambda row: row.outline_result.path if row.outline_result else None, axis=1),
+    )
+    slices_df.drop(slices_df.filter(regex='.*_directory.*|.*_result.*'), axis=1)\
+        .to_csv("TV_processed_slices.csv", index=False)
 
-    reconstructed = csv_file.merge(reconstructed)
-    reconstructed.to_csv("reconstructed.csv", index=False)
+    mincs_df = mincs_df.assign(
+        anatomical=lambda df: df.apply(lambda row: row.anatomical_padded_result.path, axis=1),
+        count=lambda df: df.apply(lambda row: row.count_padded_result.path, axis=1),
+    )
+    mincs_df.drop(mincs_df.filter(regex='.*_result.*|.*_list.*|.*_MincAtom.*'), axis=1)\
+        .to_csv("TV_mincs.csv", index=False)
     #TODO overlay them
     # s.defer(create_quality_control_images(imgs=reconstructed_mincs, montage_dir = output_dir,
     #     montage_output=os.path.join(output_dir, pipeline_name + "_stacked", "reconstructed_montage"),
     #                                       message="reconstructed_mincs"))
 
-    s.defer(create_quality_control_images(imgs=all_anatomical_pad_results, montage_dir=output_dir,
-                                          montage_output=os.path.join(output_dir, pipeline_name + "_stacked",
-                                                                      "%s_montage" % anatomical),
-                                          message="%s_mincs" % anatomical))
-    s.defer(create_quality_control_images(imgs=all_count_pad_results, montage_dir=output_dir,
-                                          montage_output=os.path.join(output_dir, pipeline_name + "_stacked",
-                                                                      "%s_montage" % count),
-                                          auto_range=True,
-                                          message="%s_mincs" % count))
+    #TODO
+    # s.defer(create_quality_control_images(imgs=all_anatomical_pad_results, montage_dir=output_dir,
+    #                                       montage_output=os.path.join(output_dir, pipeline_name + "_stacked",
+    #                                                                   "%s_montage" % anatomical),
+    #                                       message="%s_mincs" % anatomical))
+    # s.defer(create_quality_control_images(imgs=all_count_pad_results, montage_dir=output_dir,
+    #                                       montage_output=os.path.join(output_dir, pipeline_name + "_stacked",
+    #                                                                   "%s_montage" % count),
+    #                                       auto_range=True,
+    #                                       message="%s_mincs" % count))
     return Result(stages=s, output=())
 
 tv_recon_application = mk_application(parsers = [deep_segment_parser,

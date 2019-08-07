@@ -67,49 +67,43 @@ CellprofilerMemCfg = NamedTuple("CellprofilerMemCfg",
 
 default_cellprofiler_mem_cfg = CellprofilerMemCfg(base_mem=14, mem_per_size=2e-7)
 
-def deep_segment(stitched: List[FileAtom],
+def deep_segment(image: FileAtom,
                  deep_segment_pipeline: FileAtom,
-                 anatomicals: List[FileAtom],
-                 counts: List[FileAtom],
-                 Zstart: int,
-                 Zend: int,
-                 output_dir: str,
+                 anatomical_suffix: str,
+                 count_suffix: str,
                  temp_dir: str = None,
                  ):
-    s = Stages()
-    for z in range (1, Zend + 2 - Zstart):
-        stage = CmdStage(inputs=(stitched+[deep_segment_pipeline]),
-                         outputs=(anatomicals[z-1], counts[z-1]),
-                         cmd=['deep_segment.py',
-                              '--segment-intensity 1',
-                              '--temp-dir %s' % temp_dir if temp_dir else "",
-                              '--learner %s' % deep_segment_pipeline.path,
-                              '--image %s' % stitched[z-1].path,
-                              '--image-output %s' % anatomicals[z-1].path,
-                              '--centroids-output %s' % counts[z-1].path
-                              ],
-                         log_file=os.path.join(output_dir, "deep_segment.log"))
+    anatomical = image.newname_with_suffix("_" + anatomical_suffix)
+    count = image.newname_with_suffix("_" + count_suffix)
+    outline = None
+    stage = CmdStage(inputs=(image, deep_segment_pipeline),
+                     outputs=(anatomical, count),
+                     cmd=['deep_segment.py',
+                          '--segment-intensity 1',
+                          '--temp-dir %s' % temp_dir if temp_dir else "",
+                          '--learner %s' % deep_segment_pipeline.path,
+                          '--image %s' % image.path,
+                          '--image-output %s' % anatomical.path,
+                          '--centroids-output %s' % count.path
+                          ])
+    return Result(stages=Stages([stage]), output=(anatomical, count, outline))
 
-        s.add(stage)
-    return Result(stages=s, output=(anatomicals, counts))
-
-def stacks_to_volume( slices: List[FileAtom],
-                      volume: MincAtom,
-                      z_resolution: float,
-                      stacks_to_volume_options,
-                      output_dir: str,
-                      uniform_sum: bool = False):
-    stage = CmdStage(inputs=tuple(slices), outputs=(volume,),
+def stacks_to_volume(slices: List[FileAtom],
+                     output_volume: FileAtom,
+                     z_resolution: float,
+                     stacks_to_volume_options,
+                     uniform_sum: bool = False):
+    stage = CmdStage(inputs=tuple(slices), outputs=(output_volume,),
                      cmd=['stacks_to_volume.py',
+                          #TODO these should be part of csv not command line options
                           '--input-resolution %s' % stacks_to_volume_options.input_resolution,
                           '--output-resolution %s' % stacks_to_volume_options.plane_resolution,
                           '--slice-gap %s' % z_resolution,
                           '--uniform-sum' if uniform_sum else '',
                           ' '.join(slice.path for slice in slices.__iter__()), #is this hacky or the right way?
-                          '%s' % volume.path],
-                     log_file=os.path.join(output_dir, "stacks_to_volume.log"))
-
-    return Result(stages=Stages([stage]), output=(volume))
+                          '%s' % output_volume.path]
+                     )
+    return Result(stages=Stages([stage]), output=(output_volume))
 
 #refer to the link below for changing these parameters:
 #https://github.com/ANTsX/ANTs/wiki/Anatomy-of-an-antsRegistration-call
