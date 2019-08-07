@@ -96,7 +96,7 @@ def tv_recon_pipeline(options):
         ))
         mincs_df.at[index, "count_isotropic_result"] = s.defer(autocrop(
             isostep=options.stacks_to_volume.plane_resolution,
-            img=row.anatomical_stacked_MincAtom,
+            img=row.count_stacked_MincAtom,
             suffix="isotropic",
             nearest_neighbour = True
         ))
@@ -114,7 +114,7 @@ def tv_recon_pipeline(options):
             suffix="padded"
         ))
         mincs_df.at[index, "count_padded_result"] = s.defer(autocrop(
-            img=row.anatomical_isotropic_result,
+            img=row.count_isotropic_result,
             x_pad=options.autocrop.x_pad,
             y_pad=options.autocrop.y_pad,
             z_pad=options.autocrop.z_pad,
