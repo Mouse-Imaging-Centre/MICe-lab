@@ -90,35 +90,15 @@ def tv_recon_pipeline(options):
 #############################
     for index, row in mincs_df.iterrows():
         mincs_df.at[index,"anatomical_isotropic_result"] = s.defer(autocrop(
-            isostep = options.stacks_to_volume.plane_resolution,
             img = row.anatomical_stacked_MincAtom,
+            isostep = options.stacks_to_volume.plane_resolution,
             suffix = "isotropic"
         ))
         mincs_df.at[index, "count_isotropic_result"] = s.defer(autocrop(
-            isostep=options.stacks_to_volume.plane_resolution,
             img=row.count_stacked_MincAtom,
+            isostep=options.stacks_to_volume.plane_resolution,
             suffix="isotropic",
             nearest_neighbour = True
-        ))
-
-#############################
-# Step 4: Run autocrop to pad the isotropic images
-#############################
-    #TODO make this step optional
-    for index, row in mincs_df.iterrows():
-        mincs_df.at[index, "anatomical_padded_result"] = s.defer(autocrop(
-            img=row.anatomical_isotropic_result,
-            x_pad=options.autocrop.x_pad,
-            y_pad=options.autocrop.y_pad,
-            z_pad=options.autocrop.z_pad,
-            suffix="padded"
-        ))
-        mincs_df.at[index, "count_padded_result"] = s.defer(autocrop(
-            img=row.count_isotropic_result,
-            x_pad=options.autocrop.x_pad,
-            y_pad=options.autocrop.y_pad,
-            z_pad=options.autocrop.z_pad,
-            suffix="padded"
         ))
 
 #############################
@@ -131,8 +111,8 @@ def tv_recon_pipeline(options):
         .to_csv("TV_processed_slices.csv", index=False)
 
     mincs_df = mincs_df.assign(
-        anatomical=lambda df: df.apply(lambda row: row.anatomical_padded_result.path, axis=1),
-        count=lambda df: df.apply(lambda row: row.count_padded_result.path, axis=1),
+        anatomical=lambda df: df.apply(lambda row: row.anatomical_isotropic_result.path, axis=1),
+        count=lambda df: df.apply(lambda row: row.count_isotropic_result.path, axis=1),
     )
     mincs_df.drop(mincs_df.filter(regex='.*_result.*|.*_list.*|.*_MincAtom.*'), axis=1)\
         .to_csv("TV_mincs.csv", index=False)
