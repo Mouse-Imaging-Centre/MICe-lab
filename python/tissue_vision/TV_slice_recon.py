@@ -46,6 +46,7 @@ def tv_slice_recon_pipeline(options):
 #############################
 # Step 1: Run TV_stitch.py
 #############################
+    #TODO surely theres a way around this?
     df = df.assign(TV_stitch_result = "")
     for index, row in df.iterrows():
         df.at[index,"TV_stitch_result"] = s.defer(TV_stitch_wrap(brain_directory = FileAtom(row.brain_directory),
