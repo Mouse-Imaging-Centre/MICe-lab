@@ -18,7 +18,6 @@ from numpy.linalg import lstsq
 import glob
 import operator
 from fastai.vision import Path
-import tempfile
 
 #TODO why is this even needed? it breaks importing from TV_stitch
 #from tissue_vision.Zstack_icorr import *
@@ -37,6 +36,7 @@ LORESMAT = 832
 HIRESMAT = 2080
 STAGE_CALIB_FACTOR = 0.1 #um (per step)
 
+TEMPDIRECTORY = "./tmp_"+program_name+"_"+str(os.getpid()) #"/tmp/"+program_name+'_'+str(os.getpid())
 VERBOSE = False
 
 MIN_WEIGHT = 1e-3
@@ -87,6 +87,7 @@ def intensity_normalize_Zstack(inputfilelist,outputfilelist):
     return 0
 
 def gen_tempfile(descrip_str,ftype_str):
+    if not (os.path.exists(TEMPDIRECTORY)): os.mkdir(TEMPDIRECTORY)
     tempstr = TEMPDIRECTORY + "/" + program_name + '_' + descrip_str + '.' + ftype_str
     return tempstr
 
@@ -725,13 +726,6 @@ to come straight off the TissueVision system and undergo preprocessing.
 
     if (options.use_temp!=None):
         TEMPDIRECTORY=options.use_temp
-    else:
-        if options.keeptmp:
-            temp_object = tempfile.mkdtemp(prefix="tmp_TV_stitch.py_", dir=".")
-            TEMPDIRECTORY = Path(temp_object.name).as_posix()
-        else:
-            temp_object = tempfile.TemporaryDirectory(prefix="tmp_TV_stitch.py_", dir=".")
-            TEMPDIRECTORY = Path(temp_object.name).as_posix()
 
     #generate image list
     starts=[]
@@ -817,5 +811,8 @@ to come straight off the TissueVision system and undergo preprocessing.
             z_step = 0.001*TVparamdict['sectionres']  
             generate_mnc_file_from_tifstack(Zstacklist,outputfile,zstep=z_step,ystep=y_step,xstep=x_step,outdatatype=options.output_datatype) 
 
-    if options.keeptmp or options.use_temp:
-        print("Temp directory is: %s" % TEMPDIRECTORY)
+    #clean up all temp files
+    if (not options.keeptmp) and (options.use_temp==None):
+        cmdout = run_subprocess("rm -r %s"%TEMPDIRECTORY)
+    else:
+        print("Temp directory is: %s"%TEMPDIRECTORY)
