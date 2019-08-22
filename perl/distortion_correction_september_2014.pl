@@ -161,7 +161,7 @@ foreach my $mouse (@mice)
   ) {
     if (-d $d) {$tools_dir = $d; last;}
   }
-  unless (!$tools_dir) {die "Files required for distortion correction do not exist";}
+  if (!$tools_dir) {die "Files required for distortion correction do not exist";}
 
   # Deal with the transformation
   my $trans_to_use;
