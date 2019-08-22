@@ -155,9 +155,9 @@ foreach my $mouse (@mice)
   my $tools_dir;
   for my $d (
   '/hpf/largeprojects/MICe/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks/',
-  '/project/6001494/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks',
+  '/project/6001494/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks/',
   # remove this once its moved over
-  '/project/6001494/nzxwang/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks',
+  '/project/6001494/nzxwang/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks/',
   ) {
     if (-d $d) {$tools_dir = $d; last;}
   }
