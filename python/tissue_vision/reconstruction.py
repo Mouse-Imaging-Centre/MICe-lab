@@ -72,6 +72,8 @@ def deep_segment(image: FileAtom,
                  anatomical_suffix: str,
                  count_suffix: str,
                  cell_min_area: int = None,
+                 cell_mean_area: float = None,
+                 cell_max_area: int = None,
                  temp_dir: str = None,
                  ):
     anatomical = image.newname_with_suffix("_" + anatomical_suffix)
@@ -87,6 +89,8 @@ def deep_segment(image: FileAtom,
                           '--image-output %s' % anatomical.path,
                           '--centroids-output %s' % count.path,
                           '--cell-min-area %s' % cell_min_area if cell_min_area else "",
+                          '--process-clusters --cell-mean-area %s --cell-max-area %s' % (cell_mean_area, cell_max_area)\
+                              if (cell_mean_area and cell_max_area) else ""
                           ])
     return Result(stages=Stages([stage]), output=(anatomical, count, outline))
 
