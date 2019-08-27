@@ -115,6 +115,29 @@ def _mk_deep_segment_parser():
                    type=str,
                    default=None,
                    help="Specify the name of the outline images outputted by deep_segment.py")
+    p.add_argument("--cell-min-area", dest="cell_min_area",
+                   type=int,
+                   default=None,
+                   help="""
+                   The neural network may mistakenly segment stray pixels as cells.
+                   All segmented cells with area less than the value specified by --cell-min-area will be ignored.
+                   """)
+    p.add_argument("--cell-mean-area", dest="cell_mean_area",
+                   type=float,
+                   default=None,
+                   help="""
+                   Individual cells that aren't touching are processed by being reduced to a single point at their centroid.
+                   Clusters of cells area identified by the maximum area criterium specified by --cell-max-area.
+                   The number of cells contained in the cluster is found by dividing the cluster's total area
+                   by the mean area criterium specified by --cell-mean-area. That many cell centroids are
+                   randomly and uniformly sampled inside the cluster.
+                   Note that this will not work out of the box. Your neural network provided to --deep-segment-pipeline
+                   must be trained to recognize clusters of cells in addition to individual cells.
+                    """)
+    p.add_argument("--cell-max-area", dest="cell_max_area",
+                   type=int,
+                   default=None,
+                   help="See help for --cell-mean-area")
     return p
 
 deep_segment_parser = AnnotatedParser(parser=BaseParser(_mk_deep_segment_parser(), "deep_segment"),

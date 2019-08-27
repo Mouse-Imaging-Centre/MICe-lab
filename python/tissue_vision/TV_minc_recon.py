@@ -36,6 +36,9 @@ def tv_recon_pipeline(options):
                                                                          deep_segment_pipeline = FileAtom(options.deep_segment.deep_segment_pipeline),
                                                                          anatomical_suffix = options.deep_segment.anatomical_name,
                                                                          count_suffix = options.deep_segment.count_name,
+                                                                         cell_min_area = options.deep_segment.cell_min_area,
+                                                                         cell_mean_area = options.deep_segment.cell_mean_area,
+                                                                         cell_max_area = options.deep_segment.cell_max_area,
                                                                          temp_dir = options.deep_segment.temp_dir
                                                                          ))
         #hacky solution requires deep_segment() returns in that order
