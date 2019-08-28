@@ -115,6 +115,13 @@ def _mk_deep_segment_parser():
                    type=str,
                    default=None,
                    help="Specify the name of the outline images outputted by deep_segment.py")
+    p.add_argument("--qc-fraction", dest="qc_fraction",
+                   type=float,
+                   default=0.1,
+                   help="""
+                   Specify what fraction [0, 1.0] of slices should have outline images output (equally spaced).
+                   This is only used if the qc column does not exist in csv-file.
+                   """)
     p.add_argument("--cell-min-area", dest="cell_min_area",
                    type=int,
                    default=None,

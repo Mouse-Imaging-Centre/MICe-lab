@@ -71,6 +71,7 @@ def deep_segment(image: FileAtom,
                  deep_segment_pipeline: FileAtom,
                  anatomical_suffix: str,
                  count_suffix: str,
+                 outline_suffix: str = None,
                  cell_min_area: int = None,
                  cell_mean_area: float = None,
                  cell_max_area: int = None,
@@ -78,7 +79,7 @@ def deep_segment(image: FileAtom,
                  ):
     anatomical = image.newname_with_suffix("_" + anatomical_suffix)
     count = image.newname_with_suffix("_" + count_suffix)
-    outline = None
+    outline = image.newname_with_suffix("_" + outline_suffix) if outline_suffix else None
     stage = CmdStage(inputs=(image, deep_segment_pipeline),
                      outputs=(anatomical, count),
                      cmd=['deep_segment.py',
@@ -88,6 +89,7 @@ def deep_segment(image: FileAtom,
                           '--image %s' % image.path,
                           '--image-output %s' % anatomical.path,
                           '--centroids-output %s' % count.path,
+                          '--outline-output %s' % outline.path if outline_suffix else ""
                           '--cell-min-area %s' % cell_min_area if cell_min_area else "",
                           '--process-clusters --cell-mean-area %s --cell-max-area %s' % (cell_mean_area, cell_max_area)\
                               if (cell_mean_area and cell_max_area) else ""

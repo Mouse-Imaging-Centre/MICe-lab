@@ -21,6 +21,11 @@ def tv_recon_pipeline(options):
     slices_df = pd.read_csv(options.application.csv_file,
                      dtype={"brain_name": str, "brain_directory": str, "slice_directory": str})
 
+    if "qc" not in slices_df.columns:
+        slices_df["qc"] = False
+        step = int(1 / options.deep_segment.qc_fraction)
+        slices_df.qc[0::step] = True
+
 #############################
 # Step 1: Run deep_segment.py
 #############################
@@ -36,6 +41,7 @@ def tv_recon_pipeline(options):
                                                                          deep_segment_pipeline = FileAtom(options.deep_segment.deep_segment_pipeline),
                                                                          anatomical_suffix = options.deep_segment.anatomical_name,
                                                                          count_suffix = options.deep_segment.count_name,
+                                                                         outline_suffix = options.deep_segment.outline_name if row.qc else None,
                                                                          cell_min_area = options.deep_segment.cell_min_area,
                                                                          cell_mean_area = options.deep_segment.cell_mean_area,
                                                                          cell_max_area = options.deep_segment.cell_max_area,
@@ -49,7 +55,8 @@ def tv_recon_pipeline(options):
 #############################
 # Step 2: Run stacks_to_volume.py
 #############################
-    mincs_df = slices_df.drop(['slice', 'deep_segment_result', "anatomical_result", "count_result", "outline_result"], axis=1) \
+    #This is annoying... If I add anything to slices_df, I will have to delete it here as well
+    mincs_df = slices_df.drop(['slice', 'deep_segment_result', "anatomical_result", "count_result", "outline_result", "qc"], axis=1) \
         .drop_duplicates().reset_index(drop=True)\
         .assign(
         anatomical_list = slices_df.groupby("brain_name")['anatomical_result'].apply(list).reset_index(drop=True),
