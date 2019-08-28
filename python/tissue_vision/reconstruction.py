@@ -89,7 +89,7 @@ def deep_segment(image: FileAtom,
                           '--image %s' % image.path,
                           '--image-output %s' % anatomical.path,
                           '--centroids-output %s' % count.path,
-                          '--outline-output %s' % outline.path if outline_suffix else ""
+                          '--outlines-output %s' % outline.path if outline_suffix else ""
                           '--cell-min-area %s' % cell_min_area if cell_min_area else "",
                           '--process-clusters --cell-mean-area %s --cell-max-area %s' % (cell_mean_area, cell_max_area)\
                               if (cell_mean_area and cell_max_area) else ""
