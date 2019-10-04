@@ -24,7 +24,7 @@ def get_imgs(options):
     csv_base = os.path.dirname(options.csv_file)
 
 
-    csv = csv.assign(anatomy_MincAtom = lambda df: df["anatomy"].apply(lambda file:
+    csv = csv.assign(anatomical_MincAtom = lambda df: df["anatomical"].apply(lambda file:
                         MincAtom(os.path.join(csv_base, file.strip()),
                                  pipeline_sub_dir=os.path.join(options.output_directory,
                                                                options.pipeline_name + "_processed"))),
@@ -43,7 +43,7 @@ def tissue_vision_pipeline(options):
 
     s = Stages()
 
-    s.defer(create_quality_control_images(imgs=csv['anatomy_MincAtom'].tolist(), montage_dir=output_dir,
+    s.defer(create_quality_control_images(imgs=csv['anatomical_MincAtom'].tolist(), montage_dir=output_dir,
                                           montage_output=os.path.join(output_dir, pipeline_name + "_resampled",
                                                                       "input_montage"),
                                           auto_range=True,
@@ -51,7 +51,7 @@ def tissue_vision_pipeline(options):
 #############################
 # Step 1: Run MBM.py to create a consensus average
 #############################
-    mbm_result = s.defer(mbm(imgs=csv['anatomy_MincAtom'].tolist(), options=options,
+    mbm_result = s.defer(mbm(imgs=csv['anatomical_MincAtom'].tolist(), options=options,
                              prefix=options.application.pipeline_name,
                              output_dir=output_dir,
                              with_maget=False))
@@ -68,7 +68,7 @@ def tissue_vision_pipeline(options):
     determinants = mbm_result.determinants.drop(["full_det", "nlin_det"], axis=1)\
         .applymap(maybe_deref_path)
 
-    csv = csv.assign(anatomy_lsq6_MincAtom=mbm_result.xfms.lsq12_nlin_xfm.apply(lambda xfm: xfm.source),
+    csv = csv.assign(anatomical_lsq6_MincAtom=mbm_result.xfms.lsq12_nlin_xfm.apply(lambda xfm: xfm.source),
                      mbm_lsq6_XfmAtom=mbm_result.xfms.rigid_xfm.apply(lambda x: x.xfm),
                      mbm_lsq12_nlin_XfmAtom=mbm_result.xfms.lsq12_nlin_xfm.apply(lambda x: x.xfm),
                      mbm_full_XfmAtom=mbm_result.xfms.overall_xfm.apply(lambda x: x.xfm))
@@ -80,7 +80,7 @@ def tissue_vision_pipeline(options):
                               like = like))
      for img, xfm, like in zip(df["count_MincAtom"],
                                df["mbm_lsq6_XfmAtom"],
-                               df["anatomy_lsq6_MincAtom"])])
+                               df["anatomical_lsq6_MincAtom"])])
 
 
 #############################
@@ -117,9 +117,9 @@ def tissue_vision_pipeline(options):
                             s.defer(xfmconcat([xfm, lsq12_nlin_result.xfm]))))
 
     csv = csv.assign(
-        anatomy_targetspace_MincAtom=lambda df:
+        anatomical_targetspace_MincAtom=lambda df:
         [s.defer(mincresample_new(img=img, xfm=xfm, like=atlas_target))
-         for img, xfm in zip(df["anatomy_lsq6_MincAtom"], df["lsq6_to_atlas_XfmAtom"])],
+         for img, xfm in zip(df["anatomical_lsq6_MincAtom"], df["lsq6_to_atlas_XfmAtom"])],
         count_targetspace_MincAtom=lambda df:
         [s.defer(mincresample_new(img=img, xfm=xfm, like=atlas_target))
          for img, xfm in zip(df["count_lsq6_MincAtom"], df["lsq6_to_atlas_XfmAtom"])],
