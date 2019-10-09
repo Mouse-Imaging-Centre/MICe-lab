@@ -639,6 +639,10 @@ def rmfilelist(filelist):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = "stitch together tiles fresh off the TissueVision machine")
+    parser.add_argument('inputdirectory', type=str,
+                        help='the input directory with the brain name as the suffix')
+    parser.add_argument('outputfile', type=str,
+                        help='the output directory with the brain name as the suffix')
     parser.add_argument("--clobber", action="store_true", dest="clobber",
                        default=False, help="overwrite output file")
     parser.add_argument("--gradimag", action="store_true", dest="gradimag",
@@ -705,42 +709,32 @@ if __name__ == '__main__':
     parser.add_argument("--skip_tile_match", action="store_true", dest="skip_tile_match",
                        default=False, help="skip tile matching and place tiles on perfect grid (for debugging)")
 
-    options, args = parser.parse_args()
-    VERBOSE = options.verbose
+    args = parser.parse_args()
+    VERBOSE = args.verbose
 
-    try:
-        if len(args)<2: raise FatalError("Specify input directory and output file.")
-        inputdirectory = args[-2]
-        outputfile = args[-1]
-        if not options.clobber and os.path.exists(outputfile):
-            raise FatalError("The --clobber option is needed to overwrite an existing file.")
-    except FatalError as e:
-        print('Error(%s):' % program_name, e.msg)
-        raise SystemExit
-
-    if (options.use_temp!=None):
-        TEMPDIRECTORY=options.use_temp
+    if (args.use_temp!=None):
+        TEMPDIRECTORY=args.use_temp
 
     #generate image list
     starts=[]
-    for j in [options.Zstart,options.Ystart,options.Xstart]:
+    for j in [args.Zstart,args.Ystart,args.Xstart]:
         if (j>=0): starts.append(j)
         else: starts.append(None)
     ends=[]
-    for j in [options.Zend,options.Yend,options.Xend]:
+    for j in [args.Zend,args.Yend,args.Xend]:
         if (j>=0): ends.append(j)
         else: ends.append(None)
 
-    TileList,TVparamdict = generate_preprocessed_images(inputdirectory,starts=starts,ends=ends,\
-                                                        channelflag=options.channel,imgftype=options.TV_file_type,\
-                                                        fastpiezoloop=options.fastpiezo,gradcombine=options.gradimag,\
-                                                        im=options.im,corr_tile_nonuniformity=options.corr_tile_nonuniformity,
-                                                        medfilter_tile=options.medfilter_tile,medfilter_size=options.medfilter_size)
+    TileList,TVparamdict = generate_preprocessed_images(args.inputdirectory,starts=starts,ends=ends,\
+                                                        channelflag=args.channel,imgftype=args.TV_file_type,\
+                                                        fastpiezoloop=args.fastpiezo,gradcombine=args.gradimag,\
+                                                        im=args.im,corr_tile_nonuniformity=args.corr_tile_nonuniformity,
+                                                        medfilter_tile=args.medfilter_tile,medfilter_size=args.medfilter_size)
     uniqueZ=unique([ctile.indexarray[0] for ctile in TileList])
 
     #determine offsets with CCimages or read in positions from previously written file (or place images directly on a grid)
-    existing_positions_file_flag = getattr(options,'use_positions_file')
-    if (options.skip_tile_match):
+    existing_positions_file_flag = getattr(args,'use_positions_file')
+    if (args.skip_tile_match):
         cmdout=run_subprocess("identify -format \"%%w %%h\" %s"%TileList[0].croppedfilename)
         matX=int(cmdout.split()[0]); matY=int(cmdout.split()[1])
         for ctile in TileList:
@@ -748,11 +742,11 @@ if __name__ == '__main__':
             ctile.pixoffsetarray[1] = ctile.indexarray[1]*matY
             ctile.pixoffsetarray[0] = ctile.indexarray[0]
     elif not existing_positions_file_flag:
-        compute_offsets(TileList,overlapx=options.overlapx,overlapy=options.overlapy,Zref=options.Zref)
-        if getattr(options,'save_positions_file'):
-            save_positions_to_file(TileList,options.save_positions_file)
+        compute_offsets(TileList,overlapx=args.overlapx,overlapy=args.overlapy,Zref=args.Zref)
+        if getattr(args,'save_positions_file'):
+            save_positions_to_file(TileList,args.save_positions_file)
     else:
-        get_positions_from_file(TileList,options.use_positions_file)
+        get_positions_from_file(TileList,args.use_positions_file)
 
     #adjust positions to be all positive offsets based on global minima
     cmdout=run_subprocess("identify -format \"%%w %%h\" %s"%TileList[0].croppedfilename)
@@ -775,11 +769,11 @@ if __name__ == '__main__':
         positions = array([TileList[j].pixoffsetarray for j in zinds],float)
         #generate full slices from tiles
         Zsliceimg=run_image_overlay(clist,positions[:,:],outimg_size_x=outimg_size_x,outimg_size_y=outimg_size_y,\
-                                    outputfiletype=options.output_datatype,outscale=options.scaleoutput)
+                                    outputfiletype=args.output_datatype,outscale=args.scaleoutput)
         Zstacklist.append(Zsliceimg)
 
     #if needed, perform slice-by-slice intensity normalization (i.e., for piezo stacks)
-    if (options.Zstack_pzIcorr):
+    if (args.Zstack_pzIcorr):
         j=0
         while (j*TVparamdict['N_z_piezo']<len(Zstacklist)):
             intensity_normalize_Zstack(Zstacklist[j*TVparamdict['N_z_piezo']:(j+1)*TVparamdict['N_z_piezo']],
@@ -787,10 +781,10 @@ if __name__ == '__main__':
             j+=1
 
     #generate minc file
-    if not (outputfile[-4:]==".mnc"): #output an image stack
+    if not (args.outputfile[-4:]==".mnc"): #output an image stack
         for z,cfile in enumerate(Zstacklist):
-            Path(outputfile).parent.mkdir(parents=True, exist_ok=True)
-            cmdstr="cp %s %s"%(cfile,outputfile+'_Z%04d'%uniqueZ[z]+'.%s'%options.file_type)
+            Path(args.outputfile).parent.mkdir(parents=True, exist_ok=True)
+            cmdstr="cp %s %s"%(cfile,args.outputfile+'_Z%04d'%uniqueZ[z]+'.%s'%args.file_type)
             cmdout = run_subprocess(cmdstr)
     else: #output a mnc file
         x_step = 0.001*[TV_LORES,TV_HIRES][TVparamdict['mcolumns']>LORESMAT]
@@ -799,14 +793,14 @@ if __name__ == '__main__':
             z_step = 0.001*2.0*TVparamdict['zres']    #2X for real resolution, apparently?!
             z_coord_list = 0.001*TVparamdict['sectionres']*(arange(len(Zstacklist))/TVparamdict['N_z_piezo']) + \
                            z_step*(arange(len(Zstacklist))%TVparamdict['N_z_piezo'])
-            generate_mnc_file_from_tifstack(Zstacklist,outputfile,zstep=z_step,ystep=y_step,xstep=x_step,\
-                                            outdatatype=options.output_datatype,Zcoordlist=z_coord_list) 
+            generate_mnc_file_from_tifstack(Zstacklist,args.outputfile,zstep=z_step,ystep=y_step,xstep=x_step,\
+                                            outdatatype=args.output_datatype,Zcoordlist=z_coord_list) 
         else:
             z_step = 0.001*TVparamdict['sectionres']  
-            generate_mnc_file_from_tifstack(Zstacklist,outputfile,zstep=z_step,ystep=y_step,xstep=x_step,outdatatype=options.output_datatype) 
+            generate_mnc_file_from_tifstack(Zstacklist,args.outputfile,zstep=z_step,ystep=y_step,xstep=x_step,outdatatype=args.output_datatype)
 
     #clean up all temp files
-    if (not options.keeptmp) and (options.use_temp==None):
+    if (not args.keeptmp) and (args.use_temp==None):
         cmdout = run_subprocess("rm -r %s"%TEMPDIRECTORY)
     else:
         print("Temp directory is: %s"%TEMPDIRECTORY)
