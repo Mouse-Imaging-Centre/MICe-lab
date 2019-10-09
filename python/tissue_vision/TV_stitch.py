@@ -658,25 +658,25 @@ to come straight off the TissueVision system and undergo preprocessing.
                       help="use an existing positions file instead of generating positions from the input")
     parser.add_option("--save_positions_file", type="string", dest="save_positions_file", metavar="positions_file.txt", \
                       help="save the final positions to file (for subsequent use with use_positions_file)")
-    parser.add_option("--overlapx",type="float",dest="overlapx",default=20.0,\
+    parser.add_option("--overlapx",type="float",dest="overlapx",default=20.0,
                       help="tile overlap in percent")
-    parser.add_option("--overlapy",type="float",dest="overlapy",default=20.0,\
+    parser.add_option("--overlapy",type="float",dest="overlapy",default=20.0,
                       help="tile overlap in percent")
-    parser.add_option("--channel",type="int",dest="channel",default=1,\
+    parser.add_option("--channel",type="int",dest="channel",default=1,
                       help="channel to stitch")
-    parser.add_option("--Zstart",type="int",dest="Zstart",default=-1,\
+    parser.add_option("--Zstart",type="int",dest="Zstart",default=-1,
                       help="Z start index")
-    parser.add_option("--Ystart",type="int",dest="Ystart",default=-1,\
+    parser.add_option("--Ystart",type="int",dest="Ystart",default=-1,
                       help="Y start index")
-    parser.add_option("--Xstart",type="int",dest="Xstart",default=-1,\
+    parser.add_option("--Xstart",type="int",dest="Xstart",default=-1,
                       help="X start index")
-    parser.add_option("--Zend",type="int",dest="Zend",default=-1,\
+    parser.add_option("--Zend",type="int",dest="Zend",default=-1,
                       help="Z end index")
-    parser.add_option("--Yend",type="int",dest="Yend",default=-1,\
+    parser.add_option("--Yend",type="int",dest="Yend",default=-1,
                       help="Y end index")
-    parser.add_option("--Xend",type="int",dest="Xend",default=-1,\
+    parser.add_option("--Xend",type="int",dest="Xend",default=-1,
                       help="X end index")
-    parser.add_option("--Zref",type="int",dest="Zref",default=-1,\
+    parser.add_option("--Zref",type="int",dest="Zref",default=-1,
                       help="Z plane reference during tiling")
     parser.add_option("--Zstack_pzIcorr", action="store_true", dest="Zstack_pzIcorr",
                        default=0, help="intensity normalize piezo stacked images")
@@ -686,14 +686,14 @@ to come straight off the TissueVision system and undergo preprocessing.
     #                   default=0, help="first pass is moving down (default is up)")
     parser.add_option("--short", action="store_const", const="short", dest="output_datatype",
                        default="byte", help="write short int data to file (default: byte)")
-    parser.add_option("--scaleoutput",type="float",dest="scaleoutput", metavar="output scale", \
+    parser.add_option("--scaleoutput",type="float",dest="scaleoutput", metavar="output scale",
                       default=1.0,
                       help="multiply slice images by scaleoutput before saving to file "
                       "(default: %(default)s)"
                       )
-    parser.add_option("--file_type", type="string", dest="file_type", metavar="file_extension", \
+    parser.add_option("--file_type", type="string", dest="file_type", metavar="file_extension",
                       default="tif",help="output file format (default: %(default)s)")
-    parser.add_option("--TV_file_type", type="string", dest="TV_file_type", metavar="file_extension", \
+    parser.add_option("--TV_file_type", type="string", dest="TV_file_type", metavar="file_extension",
                       default="tif",help="TissueVision file format (default: %(default)s)")
     parser.add_option("--use_IM", action="store_true", dest="im",
                        default=False, help="use imagemagick for preprocessing (old behaviour)")
@@ -703,13 +703,13 @@ to come straight off the TissueVision system and undergo preprocessing.
                        default=True, help="estimate and correct tile intensity nonuniformity")
     parser.add_option("--medfilter_tile", action="store_true", dest="medfilter_tile",
                        default=False, help="median filter the cropped tiles to eliminate 'spike' noise that cause spurious correlations")
-    parser.add_option("--medfilter_size",type="int",dest="medfilter_size",default=3,\
+    parser.add_option("--medfilter_size",type="int",dest="medfilter_size",default=3,
                       help="size of median filter for cropped tiles to eliminate 'spike' noise")
     parser.add_option("--verbose", action="store_true", dest="verbose",
                        default=False, help="print output")
     parser.add_option("--keeptmp", action="store_true", dest="keeptmp",
                        default=False, help="keep temporary working directory (for debugging)")
-    parser.add_option("--use_temp", type="string", dest="use_temp", metavar="file name", \
+    parser.add_option("--use_temp", type="string", dest="use_temp", metavar="file name",
                       default=None,help="specify previous temp directory to use")
     parser.add_option("--skip_tile_match", action="store_true", dest="skip_tile_match",
                        default=False, help="skip tile matching and place tiles on perfect grid (for debugging)")
