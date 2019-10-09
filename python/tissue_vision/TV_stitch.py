@@ -11,7 +11,7 @@ import string
 import os
 import subprocess
 import getopt
-from optparse import OptionParser, Option, OptionValueError
+import argparse
 import re
 from numpy import *
 from numpy.linalg import lstsq
@@ -638,80 +638,71 @@ def rmfilelist(filelist):
 ####################################################################################################################################
 
 if __name__ == '__main__':
-
-    usage = """%s <input_directory> <output_mnc_file>
-   or  %s --help
-
-%s is a script that stitches together tiles from TV. Images are assumed
-to come straight off the TissueVision system and undergo preprocessing.
-"""
-    usage = usage % ((program_name, )*3)
-
-    parser = OptionParser(usage)
-    parser.add_option("--clobber", action="store_true", dest="clobber",
+    parser = argparse.ArgumentParser(description = "stitch together tiles fresh off the TissueVision machine")
+    parser.add_argument("--clobber", action="store_true", dest="clobber",
                        default=False, help="overwrite output file")
-    parser.add_option("--gradimag", action="store_true", dest="gradimag",
+    parser.add_argument("--gradimag", action="store_true", dest="gradimag",
                        default=True, help="use gradient and raw image combined for correlation (default)")
-    parser.add_option("--nogradimag", action="store_false", dest="gradimag",
+    parser.add_argument("--nogradimag", action="store_false", dest="gradimag",
                        default=True, help="do not use gradient and raw image combined for correlation")
-    parser.add_option("--use_positions_file", type="string", dest="use_positions_file", metavar="positions_file.txt", \
+    parser.add_argument("--use_positions_file", type=str, dest="use_positions_file", metavar="positions_file.txt", \
                       help="use an existing positions file instead of generating positions from the input")
-    parser.add_option("--save_positions_file", type="string", dest="save_positions_file", metavar="positions_file.txt", \
+    parser.add_argument("--save_positions_file", type=str, dest="save_positions_file", metavar="positions_file.txt", \
                       help="save the final positions to file (for subsequent use with use_positions_file)")
-    parser.add_option("--overlapx",type="float",dest="overlapx",default=20.0,
+    parser.add_argument("--overlapx",type=float,dest="overlapx",default=20.0,
                       help="tile overlap in percent")
-    parser.add_option("--overlapy",type="float",dest="overlapy",default=20.0,
+    parser.add_argument("--overlapy",type=float,dest="overlapy",default=20.0,
                       help="tile overlap in percent")
-    parser.add_option("--channel",type="int",dest="channel",default=1,
+    parser.add_argument("--channel",type=int,dest="channel",default=1,
                       help="channel to stitch")
-    parser.add_option("--Zstart",type="int",dest="Zstart",default=-1,
+    parser.add_argument("--Zstart",type=int,dest="Zstart",default=-1,
                       help="Z start index")
-    parser.add_option("--Ystart",type="int",dest="Ystart",default=-1,
+    parser.add_argument("--Ystart",type=int,dest="Ystart",default=-1,
                       help="Y start index")
-    parser.add_option("--Xstart",type="int",dest="Xstart",default=-1,
+    parser.add_argument("--Xstart",type=int,dest="Xstart",default=-1,
                       help="X start index")
-    parser.add_option("--Zend",type="int",dest="Zend",default=-1,
+    parser.add_argument("--Zend",type=int,dest="Zend",default=-1,
                       help="Z end index")
-    parser.add_option("--Yend",type="int",dest="Yend",default=-1,
+    parser.add_argument("--Yend",type=int,dest="Yend",default=-1,
                       help="Y end index")
-    parser.add_option("--Xend",type="int",dest="Xend",default=-1,
+    parser.add_argument("--Xend",type=int,dest="Xend",default=-1,
                       help="X end index")
-    parser.add_option("--Zref",type="int",dest="Zref",default=-1,
+    parser.add_argument("--Zref",type=int,dest="Zref",default=-1,
                       help="Z plane reference during tiling")
-    parser.add_option("--Zstack_pzIcorr", action="store_true", dest="Zstack_pzIcorr",
+    parser.add_argument("--Zstack_pzIcorr", action="store_true", dest="Zstack_pzIcorr",
                        default=0, help="intensity normalize piezo stacked images")
-    parser.add_option("--fastpiezo", action="store_true", dest="fastpiezo",
+    parser.add_argument("--fastpiezo", action="store_true", dest="fastpiezo",
                        default=0, help="piezo stack tiles are stored consecutively (instead of plane-wise)")
-    #parser.add_option("--Ydown", action="store_true", dest="Ydown",
+    #parser.add_argument("--Ydown", action="store_true", dest="Ydown",
     #                   default=0, help="first pass is moving down (default is up)")
-    parser.add_option("--short", action="store_const", const="short", dest="output_datatype",
+    parser.add_argument("--short", action="store_const", const="short", dest="output_datatype",
                        default="byte", help="write short int data to file (default: byte)")
-    parser.add_option("--scaleoutput",type="float",dest="scaleoutput", metavar="output scale",
-                      default=1.0,
+    parser.add_argument("--scaleoutput",type=float,dest="scaleoutput", metavar="output scale",
+                      default=30.0,
                       help="multiply slice images by scaleoutput before saving to file "
-                      "(default: %(default)s)"
+                      'default: %(default)s'
                       )
-    parser.add_option("--file_type", type="string", dest="file_type", metavar="file_extension",
+    parser.add_argument("--file_type", type=str, dest="file_type", metavar="file_extension",
                       default="tif",help="output file format (default: %(default)s)")
-    parser.add_option("--TV_file_type", type="string", dest="TV_file_type", metavar="file_extension",
+    parser.add_argument("--TV_file_type", type=str, dest="TV_file_type", metavar="file_extension",
                       default="tif",help="TissueVision file format (default: %(default)s)")
-    parser.add_option("--use_IM", action="store_true", dest="im",
+    parser.add_argument("--use_IM", action="store_true", dest="im",
                        default=False, help="use imagemagick for preprocessing (old behaviour)")
-    parser.add_option("--corr_tile_nonuniformity", action="store_true", dest="corr_tile_nonuniformity",
+    parser.add_argument("--corr_tile_nonuniformity", action="store_true", dest="corr_tile_nonuniformity",
                        default=True, help="estimate and correct tile intensity nonuniformity")
-    parser.add_option("--nocorr_tile_nonuniformity", action="store_false", dest="corr_tile_nonuniformity",
+    parser.add_argument("--nocorr_tile_nonuniformity", action="store_false", dest="corr_tile_nonuniformity",
                        default=True, help="estimate and correct tile intensity nonuniformity")
-    parser.add_option("--medfilter_tile", action="store_true", dest="medfilter_tile",
+    parser.add_argument("--medfilter_tile", action="store_true", dest="medfilter_tile",
                        default=False, help="median filter the cropped tiles to eliminate 'spike' noise that cause spurious correlations")
-    parser.add_option("--medfilter_size",type="int",dest="medfilter_size",default=3,
+    parser.add_argument("--medfilter_size",type=int,dest="medfilter_size",default=3,
                       help="size of median filter for cropped tiles to eliminate 'spike' noise")
-    parser.add_option("--verbose", action="store_true", dest="verbose",
+    parser.add_argument("--verbose", action="store_true", dest="verbose",
                        default=False, help="print output")
-    parser.add_option("--keeptmp", action="store_true", dest="keeptmp",
+    parser.add_argument("--keeptmp", action="store_true", dest="keeptmp",
                        default=False, help="keep temporary working directory (for debugging)")
-    parser.add_option("--use_temp", type="string", dest="use_temp", metavar="file name",
+    parser.add_argument("--use_temp", type=str, dest="use_temp", metavar="file name",
                       default=None,help="specify previous temp directory to use")
-    parser.add_option("--skip_tile_match", action="store_true", dest="skip_tile_match",
+    parser.add_argument("--skip_tile_match", action="store_true", dest="skip_tile_match",
                        default=False, help="skip tile matching and place tiles on perfect grid (for debugging)")
 
     options, args = parser.parse_args()
