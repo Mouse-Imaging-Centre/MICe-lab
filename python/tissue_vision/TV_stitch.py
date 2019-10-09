@@ -687,7 +687,10 @@ to come straight off the TissueVision system and undergo preprocessing.
     parser.add_option("--short", action="store_const", const="short", dest="output_datatype",
                        default="byte", help="write short int data to file (default: byte)")
     parser.add_option("--scaleoutput",type="float",dest="scaleoutput", metavar="output scale", \
-                       default=1.0, help="multiply slice images by scaleoutput before saving to file")
+                      default=1.0,
+                      help="multiply slice images by scaleoutput before saving to file "
+                      "(default: %(default)s)"
+                      )
     parser.add_option("--file_type", type="string", dest="file_type", metavar="file_extension", \
                       default="tif",help="output file format (default: %(default)s)")
     parser.add_option("--TV_file_type", type="string", dest="TV_file_type", metavar="file_extension", \
