@@ -162,6 +162,17 @@ def _mk_stacks_to_volume_parser():
                    type=float,
                    default=None,
                    help="The output in-plane resolution of the tiles in mm")
+    p.add_argument("--manual-scale-output", dest="manual_scale_output",
+                   action="store_true", default=False,
+                   help="The purpose of this option is to correct for when brains have been imaged using different "
+                        "interslice distances."
+                        "If true [default = %(default)s], your input to --csv-file must have a scale_output column. "
+                        "The stacked count MINC file will have its values scaled by that number. "
+                        "If false, each brain's count slices will be scaled by its interslice distance divided by the "
+                        "the minimum interslice distance of all brains. Each brain's scalar value will be reflected "
+                        "in the output csv files."
+                   )
+
     return p
 
 stacks_to_volume_parser = AnnotatedParser(parser=BaseParser(_mk_stacks_to_volume_parser(), "stacks_to_volume"),

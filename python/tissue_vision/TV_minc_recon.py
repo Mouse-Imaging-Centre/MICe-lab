@@ -79,7 +79,13 @@ def tv_recon_pipeline(options):
             ), axis=1
         )
     )
-
+    if not options.stacks_to_volume.manual_scale_output:
+        min_interslice_distance = mincs_df.interslice_distance.min()
+        mincs_df = mincs_df.assign(
+            scale_output=lambda df: df.apply(
+                lambda row: row.interslice_distance/min_interslice_distance
+            )
+        )
     for index, row in mincs_df.iterrows():
         s.defer(stacks_to_volume(
             slices = row.anatomical_list,
@@ -93,6 +99,7 @@ def tv_recon_pipeline(options):
             output_volume=row.count_stacked_MincAtom,
             z_resolution=row.interslice_distance,
             stacks_to_volume_options=options.stacks_to_volume,
+            scale_output = row.scale_output,
             uniform_sum=True
         ))
 #############################

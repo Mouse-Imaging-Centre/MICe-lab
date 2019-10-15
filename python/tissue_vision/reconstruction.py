@@ -100,6 +100,7 @@ def stacks_to_volume(slices: List[FileAtom],
                      output_volume: FileAtom,
                      z_resolution: float,
                      stacks_to_volume_options,
+                     scale_output: float = 1.0,
                      uniform_sum: bool = False):
     stage = CmdStage(inputs=tuple(slices), outputs=(output_volume,),
                      cmd=['stacks_to_volume.py',
@@ -108,6 +109,7 @@ def stacks_to_volume(slices: List[FileAtom],
                           '--output-resolution %s' % stacks_to_volume_options.plane_resolution,
                           '--slice-gap %s' % z_resolution,
                           '--uniform-sum' if uniform_sum else '',
+                          '--scale-output %s' % scale_output,
                           ' '.join(slice.path for slice in slices.__iter__()), #is this hacky or the right way?
                           '%s' % output_volume.path]
                      )
