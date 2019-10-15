@@ -4,11 +4,7 @@ from pyminc.volumes.factory import *
 import numpy as np
 import scipy.ndimage
 import scipy.interpolate
-import scipy.ndimage
 import argparse
-
-import scipy.interpolate
-import scipy.ndimage
 
 # taken from http://www.scipy.org/Cookbook/Rebinning
 def congrid(a, newdims, method='linear', centre=False, minusone=False):
