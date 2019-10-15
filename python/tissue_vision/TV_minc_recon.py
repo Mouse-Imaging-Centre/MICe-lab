@@ -80,12 +80,8 @@ def tv_recon_pipeline(options):
         )
     )
     if not options.stacks_to_volume.manual_scale_output:
-        min_interslice_distance = mincs_df.interslice_distance.min()
-        mincs_df = mincs_df.assign(
-            scale_output=lambda df: df.apply(
-                lambda row: row.interslice_distance/min_interslice_distance
-            )
-        )
+        mincs_df["scale_output"] = mincs_df.interslice_distance/mincs_df.interslice_distance.min()
+
     for index, row in mincs_df.iterrows():
         s.defer(stacks_to_volume(
             slices = row.anatomical_list,
