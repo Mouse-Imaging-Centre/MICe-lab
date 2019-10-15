@@ -144,6 +144,11 @@ if __name__ == "__main__":
     # add option for explicitly giving output matrix size
 
     preprocessing = parser.add_argument_group("preprocessing")
+    preprocessing.add_argument("--scale-output", dest="scale_output",
+                               help = "Scale the output by this value "
+                                      "[default: %(default)s]",
+                               type=float, default=1.0
+                               )
     preprocessing.add_argument("--gaussian", action="store_const",
                                    help="Apply 2D gaussian (FWHM set based "
                                    "on input and output sizes)",
@@ -210,11 +215,10 @@ if __name__ == "__main__":
     for i in range(n_slices):
         print("In slice", i+1, "out of", n_slices)
         imslice = scipy.ndimage.imread(args.input_images[i])
-
         # normalize slice to lie between 0 and 1
         original_type_max = np.iinfo(imslice.dtype).max
         imslice = imslice.astype('float')
-        imslice = imslice / original_type_max
+        imslice = imslice * (args.scale_output/original_type_max)
 
         # smooth the data depending on the chosen option
         if args.preprocess=="gaussian":
