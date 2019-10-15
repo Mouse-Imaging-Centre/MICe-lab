@@ -54,7 +54,7 @@ def congrid(a, newdims, method='linear', centre=False, minusone=False):
             dimlist.append( (old[i] - m1) / (newdims[i] - m1) \
                             * (base + ofs) - ofs )
         cd = np.array( dimlist ).round().astype(int)
-        newa = a[list( cd )]
+        newa = a[tuple(cd)]
         return newa
 
     elif method in ['nearest','linear']:
