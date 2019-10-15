@@ -5,7 +5,7 @@ import numpy as np
 import scipy.ndimage
 import scipy.interpolate
 import scipy.ndimage
-from optparse import OptionParser, OptionGroup
+import argparse
 
 import scipy.interpolate
 import scipy.ndimage
@@ -115,9 +115,8 @@ def congrid(a, newdims, method='linear', centre=False, minusone=False):
 
 
 if __name__ == "__main__":
-    usage = "%prog [options] in_1.tif in_2.tif ..- in_n.tif out.mnc"
     description = """
-%prog takes a series of two-dimensional images (tif, png, jpeg
+%(prog)s takes a series of two-dimensional images (tif, png, jpeg
  ... whatever can be read by python's PIL library) and converts them
  into a 3D MINC volume. Additional options control for resampling of
  slices - in the case of histology data, for example, the 2D slices
@@ -127,96 +126,94 @@ if __name__ == "__main__":
  volume.
 """
     
-    parser = OptionParser(usage=usage, description=description)
-
-    size_group = OptionGroup(parser, "Determining input and output size")
-    size_group.add_option("--input-resolution", dest="input_resolution",
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('input_images', type=str, nargs="+",
+                        help='')
+    parser.add_argument('output_image', type=str,
+                        help='')
+    size = parser.add_argument_group("size")
+    size.add_argument("--input-resolution", dest="input_resolution",
                           help="Input resolution in mm (i.e. the pixel size "
-                          "assuming that it's isotropic) [default: %default]",
-                          type="float", default=0.00137)
-    size_group.add_option("--output-resolution", dest="output_resolution",
+                          "assuming that it's isotropic) [default: %(default)s]",
+                          type=float, default=0.00137)
+    size.add_argument("--output-resolution", dest="output_resolution",
                           help="The desired output resolution in mm (i.e. "
                           "what the data will be resampled to) "
-                          "[default: %default]",
-                          type="float", default=0.075)
-    size_group.add_option("--slice-gap", dest="slice_gap",
+                          "[default: %(default)s]",
+                          type=float, default=0.075)
+    size.add_argument("--slice-gap", dest="slice_gap",
                           help="The slice gap in mm (i.e. the distance "
-                          "between adjacent slices)[default: %default]",
-                          type="float", default=0.075)
+                          "between adjacent slices)[default: %(default)s]",
+                          type=float, default=0.075)
     # add option for explicitly giving output matrix size
-    parser.add_option_group(size_group)
 
-    preprocessing_group = OptionGroup(parser, "Preprocessing of each slice")
-    preprocessing_group.add_option("--gaussian", action="store_const",
+    preprocessing = parser.add_argument_group("preprocessing")
+    preprocessing.add_argument("--gaussian", action="store_const",
                                    help="Apply 2D gaussian (FWHM set based "
                                    "on input and output sizes)",
                                    const="gaussian", dest="preprocess",
                                    default=None)
-    preprocessing_group.add_option("--uniform", action="store_const",
+    preprocessing.add_argument("--uniform", action="store_const",
                                    help="Apply 2D uniform filter (size based "
                                    "on input and output sizes)",
                                    const="uniform", dest="preprocess")
-    preprocessing_group.add_option("--uniform-sum", action="store_const",
+    preprocessing.add_argument("--uniform-sum", action="store_const",
                                    help="Apply 2D uniform filter and multiply "
                                    "it by filter volume to obtain a count. Use "
                                    "this option if, for example, the slices "
                                    "contain classified neurons.",
                                    const="uniform_sum", dest="preprocess")
-    parser.add_option_group(preprocessing_group)
     
-    dim_group = OptionGroup(parser, "Volume dimension options")
-    dim_group.add_option("--xyz", action="store_const",
+    dim = parser.add_argument_group("dim")
+    dim.add_argument("--xyz", action="store_const",
                          help="XYZ dimension order",
                          const=("xspace", "yspace", "zspace"),
                          dest="dimorder",
                          default=("yspace", "zspace", "xspace"))
-    dim_group.add_option("--xzy", action="store_const",
+    dim.add_argument("--xzy", action="store_const",
                          help="XZY dimension order",
                          const=("xspace", "zspace", "yspace"),
                          dest="dimorder")
-    dim_group.add_option("--yxz", action="store_const",
+    dim.add_argument("--yxz", action="store_const",
                          help="YXZ dimension order",
                          const=("yspace", "xspace", "zspace"),
                          dest="dimorder")
-    dim_group.add_option("--yzx", action="store_const",
+    dim.add_argument("--yzx", action="store_const",
                          help="YZX dimension order [default]",
                          const=("yspace", "zspace", "xspace"),
                          dest="dimorder")
-    dim_group.add_option("--zxy", action="store_const",
+    dim.add_argument("--zxy", action="store_const",
                          help="ZXY dimension order",
                          const=("zspace", "xspace", "yspace"),
                          dest="dimorder")
-    dim_group.add_option("--zyx", action="store_const",
+    dim.add_argument("--zyx", action="store_const",
                          help="ZYX dimension order",
                          const=("zspace", "yspace", "xspace"),
                          dest="dimorder")
 
-    parser.add_option_group(dim_group)
-
-    options, args = parser.parse_args()
+    args = parser.parse_args()
     
     # construct volume
     # need to know the number of slices
-    output_filename = args.pop()
-    n_slices = len(args)
+    n_slices = len(args.input_images)
     # need to know the size of the output slices - read in a single slice
-    test_slice = scipy.ndimage.imread(args[0])
+    test_slice = scipy.ndimage.imread(args.input_images[0])
     slice_shape = np.array(test_slice.shape)
-    size_fraction = options.input_resolution / options.output_resolution
+    size_fraction = args.input_resolution / args.output_resolution
     output_size = np.ceil(slice_shape * size_fraction).astype('int')
     filter_size = np.ceil(slice_shape[0] / output_size[0])
 
-    vol = volumeFromDescription(output_filename, 
-                                options.dimorder,
+    vol = volumeFromDescription(args.output_image,
+                                args.dimorder,
                                 sizes=(n_slices,output_size[0],output_size[1]),
                                 starts=(0,0,0),
-                                steps=(options.slice_gap, 
-                                       options.output_resolution,
-                                       options.output_resolution), 
+                                steps=(args.slice_gap,
+                                       args.output_resolution,
+                                       args.output_resolution),
                                 volumeType='ushort')
     for i in range(n_slices):
         print("In slice", i+1, "out of", n_slices)
-        imslice = scipy.ndimage.imread(args[i])
+        imslice = scipy.ndimage.imread(args.input_images[i])
 
         # normalize slice to lie between 0 and 1
         original_type_max = np.iinfo(imslice.dtype).max
@@ -224,11 +221,11 @@ if __name__ == "__main__":
         imslice = imslice / original_type_max
 
         # smooth the data depending on the chosen option
-        if options.preprocess=="gaussian":
+        if args.preprocess=="gaussian":
             imslice = scipy.ndimage.gaussian_filter(imslice, sigma=filter_size)
-        if options.preprocess=="uniform" or options.preprocess=="uniform_sum":
+        if args.preprocess=="uniform" or args.preprocess=="uniform_sum":
             imslice = scipy.ndimage.uniform_filter(imslice, size=filter_size)
-        if options.preprocess=="uniform_sum":
+        if args.preprocess=="uniform_sum":
             imslice = imslice * filter_size * filter_size
 
         # downsample the slice
