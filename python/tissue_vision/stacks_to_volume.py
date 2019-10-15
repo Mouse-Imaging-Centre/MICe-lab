@@ -160,7 +160,7 @@ if __name__ == "__main__":
                                    "contain classified neurons.",
                                    const="uniform_sum", dest="preprocess")
     
-    dim = parser.add_argument_group("dim")
+    dim = parser.add_mutually_exclusive_group()
     dim.add_argument("--xyz", action="store_const",
                          help="XYZ dimension order",
                          const=("xspace", "yspace", "zspace"),
