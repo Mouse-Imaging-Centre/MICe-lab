@@ -35,7 +35,7 @@ def get_imgs(options):
     return csv
 
 def tissue_vision_pipeline(options):
-    output_dir = options.application.output_directory
+    output_dir = os.getcwd()
     pipeline_name = options.application.pipeline_name
 
     csv = original_csv = get_imgs(options.application)

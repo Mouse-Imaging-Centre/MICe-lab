@@ -25,7 +25,7 @@ def read_mosaic_file(file: str) -> Dict:
     return dict(zip(keys, values))
 
 def tv_slice_recon_pipeline(options):
-    output_dir = options.application.output_directory
+    output_dir = os.getcwd()
     pipeline_name = options.application.pipeline_name
 
     s = Stages()

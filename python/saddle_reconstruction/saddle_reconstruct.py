@@ -28,7 +28,7 @@ from saddle_reconstruction.arguments      import varian_recon_parser, crop_to_br
 
 def saddle_recon_pipeline(options):
 
-    output_dir    = options.application.output_directory
+    output_dir    = os.getcwd()
     pipeline_name = options.application.pipeline_name
     fid_input_dir = options.saddle_recon.varian_recon.fid_input_directory
 
