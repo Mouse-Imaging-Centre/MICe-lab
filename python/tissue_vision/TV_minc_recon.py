@@ -13,7 +13,7 @@ from tissue_vision.arguments import deep_segment_parser, stacks_to_volume_parser
 from tissue_vision.reconstruction import deep_segment, stacks_to_volume
 
 def tv_recon_pipeline(options):
-    output_dir = os.getcwd()
+    output_dir = options.application.output_directory
     pipeline_name = options.application.pipeline_name
 
     s = Stages()
