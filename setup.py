@@ -5,7 +5,7 @@ from setuptools import setup
 import sys
 
 setup(name="MICe-lab",
-      version='0.18',
+      version='0.19',
       install_requires=[
         'pydpiper>=2.0.9',
         'ConfigArgParse>=0.11',

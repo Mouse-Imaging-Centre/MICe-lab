@@ -1,3 +1,8 @@
+New in version 0.19
+===================
+- small fixes to convert_CT_image.py
+- remove run_TIFF_to_MINC_conversion.sh
+
 New in version 0.18
 ===================
 - small Python 3 changes: fix dynamic imports for mri_recon.py script
