@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+
 import argparse
 from argparse import Namespace
 import os
@@ -10,9 +11,10 @@ import time
 
 
 def parser():
-  p = argparse.ArgumentParser("Convert a series of 2D .tif files from the Skyscan CT scanner to a MINC file,"
-                              " given the log file from the scan and optionally a regex to filter tif files"
-                              " in that directory")
+  p = argparse.ArgumentParser(
+        usage="Convert a series of 2D .tif files from the Skyscan CT scanner to a MINC file,"
+              " given the log file from the scan and optionally a regex to filter tif files"
+              " in that directory")
   p.add_argument("--regex", type=lambda x: x.encode(),
                  help="regular expression (NOT shell glob) to match files to convert"
                       " (don't forget to escape special characters)")
@@ -40,7 +42,6 @@ def tiff_info(tiff_file):
   width  = re.search(rb"Image Width: (?P<width>\d+) ", info).group('width')
   length = re.search(rb"Image Length: (?P<length>\d+)", info).group('length')
 
-
   bit_depth = re.search(rb"Bits/Sample: (?P<bit_depth>\d+)", info).group('bit_depth')
 
   return Namespace(width=int(width), length=int(length), bit_depth=int(bit_depth))
@@ -49,19 +50,24 @@ def tiff_info(tiff_file):
 def main(argv):
   args = parser().parse_args(argv[1:])
 
-  d = os.path.dirname(args.log_file)
+  # use `realpath` here as otherwise `d` might be the empty string instead of `.`, hence unusable
+  d = os.path.dirname(os.path.realpath(args.log_file))
   all_files = subprocess.run(["ls", "-v", d], stdout=subprocess.PIPE, check=True).stdout.split(b"\n")
   
   # The organization of files produced by the CT scanner is such that all TIFF slices pertaining to the scan are called:
-  # {log_base}XXXXXXXX.tif where each X is an integer, we can use this information to find the correct tif files to work with
+  # {log_base}XXXXXXXX.tif where each X is a digit.
+  # We can use this information to find the correct tif files to work with
   log_no_extension = os.path.splitext(args.log_file)[0]
   log_base         = os.path.basename(log_no_extension)
-  match_string     = log_base + "[0-9].*tiff?"
-  tiff_files = [f for f in all_files if re.search(pattern=args.regex or bytes(match_string,'ascii'), string=f)]
+  match_string     = log_base + ".?[0-9].*tiff?"
+  pattern          = args.regex or bytes(match_string, 'ascii')
+  tiff_files = [f for f in all_files if re.search(pattern=pattern, string=f)]
 
-  # We need to make sure that the transfer of TIFF files has completed (this program possibly is called in the middle
-  # of a transfer, which would mean that only part of the file would be reconstructed). We count the number of TIFF files
-  # related to this log file, and check again after 30 seconds until the TIFF count is stable.
+  # We may need to make sure that the transfer of TIFF files has completed
+  # (this program possibly is called in the middle
+  # of a transfer, which would mean that only part of the file would be reconstructed).
+  # We count the number of TIFF files related to this log file,
+  # and check again after 30 seconds until the TIFF count is stable.
   if args.check_transfer:
     prev_tif_count = -1
     cur_tif_count = len(tiff_files)
@@ -97,7 +103,8 @@ def main(argv):
 
   with open(args.log_file, 'r') as log_file:
     contents = log_file.read()
-    image_resolution = float(re.search("\nPixel Size.*=([\d.]+)", contents).group(1)) / 1000.0
+
+  image_resolution = float(re.search("\nPixel Size.*=([\d.]+)", contents).group(1)) / 1000.0
 
   print("pixel size: %f" % image_resolution)
 
@@ -136,36 +143,34 @@ def main(argv):
   log_file_lines = log_file_handle.readlines()
   minc_modify_header_cmd = ["minc_modify_header", "-sinsert", "CT:logfile=\"" + ''.join(log_file_lines) + "\"", args.output_file]
   subprocess.run(minc_modify_header_cmd)
-  
-  # also some specific parts:
+
+  # copy a bunch (but not all) attrs to the MINC header (and also rename them in a lossy way...):
+  # (not very clean/efficient - better to build a data structure out of the log file)
+  relevant_attrs = (
+    ("Camera binning", "binning"),
+    ("Image Rotation", "imagerotation"),
+    ("Exposure (ms)", "exposure"),
+    ("Rotation Step (deg)", "rotationstep"),
+    ("Use 360 Rotation", "rotation360"),
+    ("Source Voltage (kV)", "sourcevoltage"),
+    ("Source Current (uA)", "sourcecurrent"),
+    ("Vertical Object Position (mm)", "verticalobjectposition"),
+    ("Object to Source (mm)", "objecttosource"),
+    ("Camera to Source (mm)", "cameratosource"),
+    ("Filter", "filter")
+  )
+
   for line in log_file_lines:
     if "=" in line:
       # strip spaces/newline from both the beginning and end of the value after the equal sign:
       value = line.split("=")[1].strip()
-      
-      if "Camera binning" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:binning=" + value, args.output_file])
-      elif "Image Rotation" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:imagerotation=" + value, args.output_file])
-      elif "Exposure (ms)" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:exposure=" + value, args.output_file])
-      elif "Rotation Step (deg)" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:rotationstep=" + value, args.output_file])
-      elif "Use 360 Rotation" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:rotation360=" + value, args.output_file])
-      elif "Source Voltage (kV)" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:sourcevoltage=" + value, args.output_file])
-      elif "Source Current (uA)" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:sourcecurrent=" + value, args.output_file])
-      elif "Vertical Object Position (mm)" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:verticalobjectposition=" + value, args.output_file])
-      elif "Object to Source (mm)" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:objecttosource=" + value, args.output_file])
-      elif "Camera to Source (mm)" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:cameratosource=" + value, args.output_file])
-      elif "Filter=" in line:
-        subprocess.run(["minc_modify_header", "-sinsert", "acquisition:filter=\"" + value + "\"", args.output_file])
 
+      for log_attr, minc_attr in relevant_attrs:
+        if log_attr in line:
+          subprocess.run(["minc_modify_header", "-sinsert",
+                         "acquisition:{minc_attr}={value}",
+                         args.output_file])
+          break  # only one attr per line of the TIFF file
 
 
 if __name__ == "__main__":
