@@ -341,7 +341,7 @@ foreach my $mouse (@mice)
 	$combined_call .= ";";
 	$combined_call .= $minc_header_addon;
 	if($qbatch and !$spawn)  {
-    $combined_call .= " \" | qbatch - --mem=4G -N dc-4G-${base}";
+    $combined_call .= " \" | qbatch --mem=4G -N dc-4G-${base} -";
   }
 
 
