@@ -144,12 +144,15 @@ foreach my $mouse (@mice)
 
   ##############################################################################
   # Deal with the transformation
+  my $distcorr_dir = $ENV{"CRYO_DISTORTION_CORRECTION_DIR"}
+  unless (defined $disctcorr_dir) {die "CRYO_DISTORTION_CORRECTION_DIR not set"; }
+
   my $trans_to_use;
   if (${coil} == 1 or
       ${coil} == 2 or 
       ${coil} == 3 or 
       ${coil} == 4 ) {
-    $trans_to_use = "/hpf/largeprojects/MICe/matthijs/2016-05-cryo-distortion-correction/correction_coil${coil}/coil${coil}_lsq9_scaling_only.xfm";
+    $trans_to_use = "${distcorr_dir}/correction_coil${coil}/coil${coil}_lsq9_scaling_only.xfm";
   }
   else {
     print "\nError: the brkr:coil entry for file $mouse must be one from 1-4 (was: $coil )\n";

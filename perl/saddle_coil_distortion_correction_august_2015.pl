@@ -14,7 +14,7 @@ on the Varian scanner (created in August 2015)
 
 $0 [options] -output-dir /path/to/output input_1.mnc input_2.mnc ... input_n.mnc
 
-By default the distortion corrections are sent to the farms (qbatch). If you want to run the corrections on your machine, run:
+By default the distortion corrections are sent to the grid (via qbatch). If you want to run the corrections on your machine, run:
 
 $0 [options] -spawn -output-dir /path/to/output input_1.mnc input_2.mnc ... input_n.mnc
 ";
@@ -151,6 +151,10 @@ foreach my $mouse (@mice)
 
   ##############################################################################
   # Deal with the transformation
+  my $distcorr_var = "SADDLE_DISTORTION_CORRECTION_DIR"
+  my $distcorr_dir = $ENV{$distcorr_var}
+  unless (defined $distcorr_dir) {die "${distcorr_var} not set";}
+
   my $trans_to_use;
   if (${coil} == 1 or
       ${coil} == 2 or 
@@ -159,8 +163,8 @@ foreach my $mouse (@mice)
       ${coil} == 5 or
       ${coil} == 6 or 
       ${coil} == 7 ) {
-    $trans_to_use     = "/hpf/largeprojects/MICe/tools/distortion_correction/2015-07-saddle-distortion-correction/final_corrections/distortion_correction_coil_${coil}_lambda_0.01_distance_10.xfm";
-    $deformation_grid = "/hpf/largeprojects/MICe/tools/distortion_correction/2015-07-saddle-distortion-correction/final_corrections/distortion_correction_coil_${coil}_lambda_0.01_distance_10_grid_0.mnc";
+    $trans_to_use     = "${distcorr_dir}/distortion_correction_coil_${coil}_lambda_0.01_distance_10.xfm";
+    $deformation_grid = "${distcorr_dir}/distortion_correction_coil_${coil}_lambda_0.01_distance_10_grid_0.mnc";
   }
   else {
     print "\nError: the vnmr:coil entry for file $mouse must be one from 1-7 (was: $coil )\n";

@@ -152,16 +152,9 @@ foreach my $mouse (@mice)
 
   ##############################################################################
   # Find the files
-  my $tools_dir;
-  for my $d (
-  '/hpf/largeprojects/MICe/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks/',
-  '/project/6001494/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks/',
-  # remove this once its moved over
-  '/project/6001494/nzxwang/tools/distortion_correction/2013-11-Distortion-Correction/2014-09-bsplines-on-landmarks/',
-  ) {
-    if (-d $d) {$tools_dir = $d; last;}
-  }
-  if (!$tools_dir) {die "Files required for distortion correction do not exist";}
+  my $distcorr_var = "DISTORTION_CORRECTION_DIR";
+  my $distcorr_dir = $ENV{$distcorr_var};
+  unless ($distcorr_dir) {die "${distcorr_var} not set";}
 
   # Deal with the transformation
   my $trans_to_use;
@@ -183,8 +176,8 @@ foreach my $mouse (@mice)
       ${coil} == 14 or 
       ${coil} == 15 or 
       ${coil} == 16 ) {
-    $trans_to_use = "${tools_dir}CONCAT_CT_and_MR_coil_${coil}_lambda_0.001_distance_10_range_5.xfm";
-    $deformation_grid = "${tools_dir}CONCAT_CT_and_MR_coil_${coil}_lambda_0.001_distance_10_range_5_grid_0.mnc";
+    $trans_to_use = "${distcorr_dir}/CONCAT_CT_and_MR_coil_${coil}_lambda_0.001_distance_10_range_5.xfm";
+    $deformation_grid = "${distcorr_dir}/CONCAT_CT_and_MR_coil_${coil}_lambda_0.001_distance_10_range_5_grid_0.mnc";
   }
   #
   # Coils 8-12
@@ -202,8 +195,8 @@ foreach my $mouse (@mice)
         ${coil} == 10 or 
         ${coil} == 11 or 
         ${coil} == 12 ) { 
-    $trans_to_use = "${tools_dir}CONCAT_CT_and_MR_coil_${coil}_lambda_0.01_distance_10_range_5.xfm";
-    $deformation_grid = "${tools_dir}CONCAT_CT_and_MR_coil_${coil}_lambda_0.01_distance_10_range_5_grid_0.mnc";
+    $trans_to_use = "${distcorr_dir}/CONCAT_CT_and_MR_coil_${coil}_lambda_0.01_distance_10_range_5.xfm";
+    $deformation_grid = "${distcorr_dir}/CONCAT_CT_and_MR_coil_${coil}_lambda_0.01_distance_10_range_5_grid_0.mnc";
   }
   else {
     print "\nError: the vnmr:coil entry for file $mouse must be one from 1-16 (was: $coil )\n";
