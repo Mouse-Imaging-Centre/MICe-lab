@@ -11,7 +11,6 @@ setup(name="MICe-lab",
         'ConfigArgParse>=0.11',
         'numpy',
         'pyminc',
-        'typing',
         'scipy',
         'snakemake',
         'matplotlib'
